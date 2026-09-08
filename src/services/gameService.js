@@ -19,6 +19,26 @@ const gameService = {
         return playerService.updatePlayer({
             coins: newCoins
         })
+    },
+
+    takeDamage(amount) {
+        const player = playerService.getPlayer()
+
+        console.log("Player:", player)
+        console.log("Health:", player.health)
+        console.log("Amount:", amount)
+
+        const result = player.health - amount
+
+        console.log("Resultado da subtração:", result)
+
+        const newHealth = Math.max(0, result)
+
+        console.log("New Health:", newHealth)
+
+        return playerService.updatePlayer({
+            health: newHealth
+        })
     }
 }
 
