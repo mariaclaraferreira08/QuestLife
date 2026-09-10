@@ -1,4 +1,5 @@
 import playerService from "./playerService"
+import { difficulties } from "../data/difficulties"
 
 const gameService = {
     addXP(amount) {
@@ -24,22 +25,41 @@ const gameService = {
     takeDamage(amount) {
         const player = playerService.getPlayer()
 
-        console.log("Player:", player)
-        console.log("Health:", player.health)
-        console.log("Amount:", amount)
-
-        const result = player.health - amount
-
-        console.log("Resultado da subtração:", result)
-
-        const newHealth = Math.max(0, result)
-
-        console.log("New Health:", newHealth)
+        const newHealth = Math.max(0, player.health - amount)
 
         return playerService.updatePlayer({
             health: newHealth
         })
-    }
-}
+    },
 
+    getDifficulty(difficulty) {
+        return difficulties[difficulty]
+    },
+
+    completeTask(difficulty) {
+        const reward = this.getDifficulty(difficulty)
+
+        const player = playerService.getPlayer()
+
+        const newXP = player.xp + reward.xp
+        const newCoins = player.coins + reward.coins
+
+        return playerService.updatePlayer({
+            xp: newXP,
+            coins: newCoins
+        })
+    },
+
+    failTask(difficulty) {
+    const reward = this.getDifficulty(difficulty)
+
+    const player = playerService.getPlayer()
+
+    const newHealth = Math.max(0, player.health - reward.damage)
+
+    return playerService.updatePlayer({
+        health: newHealth
+            })
+        }
+  }
 export default gameService
