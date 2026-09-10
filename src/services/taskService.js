@@ -23,6 +23,25 @@ const taskService = {
         return tasks
     },
 
+    updateTask(taskId, updatedData) {
+        const tasks = this.getTasks()
+
+        const updatedTasks = tasks.map(task => {
+            if (task.id === taskId) {
+                return {
+                    ...task,
+                    ...updatedData
+                }
+            }
+
+            return task
+        })
+
+        storageService.save(TASKS_KEY, updatedTasks)
+
+        return updatedTasks
+    },
+
     removeTask(taskId) {
         const tasks = this.getTasks()
 
