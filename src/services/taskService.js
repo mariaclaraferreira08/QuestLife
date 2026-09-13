@@ -14,13 +14,18 @@ const taskService = {
     },
 
     addTask(task) {
-        const tasks = this.getTasks()
+    const tasks = this.getTasks()
 
-        tasks.push(task)
+    const newTask = {
+        ...task,
+        id: Date.now()
+    }
 
-        storageService.save(TASKS_KEY, tasks)
+    tasks.push(newTask)
 
-        return tasks
+    storageService.save(TASKS_KEY, tasks)
+
+    return tasks
     },
 
     updateTask(taskId, updatedData) {
