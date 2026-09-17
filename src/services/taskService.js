@@ -47,6 +47,12 @@ const taskService = {
         return updatedTasks
     },
 
+    completeTask(taskId) {
+    return this.updateTask(taskId, {
+        completed: true
+    })
+},
+
     removeTask(taskId) {
         const tasks = this.getTasks()
 
