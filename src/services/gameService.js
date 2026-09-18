@@ -1,4 +1,5 @@
 import playerService from "./playerService"
+import taskService from "./taskService"
 import { difficulties } from "../data/difficulties"
 
 const gameService = {
@@ -49,7 +50,7 @@ const gameService = {
             coins: newCoins
         })
     },
-    
+
     completeTaskAndReward(task) {
     const player = playerService.getPlayer()
     const reward = this.getDifficulty(task.difficulty)
@@ -61,6 +62,22 @@ const gameService = {
         xp: newXP,
         coins: newCoins
     })
+},
+
+    completeTaskById(taskId) {
+    const task = taskService.getTaskById(taskId)
+
+    if (!task) {
+        return null
+    }
+
+    if (task.completed) {
+        return null
+    }
+
+    taskService.completeTask(taskId)
+
+    return this.completeTaskAndReward(task)
 },
 
     failTask(difficulty) {
