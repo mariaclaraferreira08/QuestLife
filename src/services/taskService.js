@@ -13,6 +13,12 @@ const taskService = {
         return tasks
     },
 
+    getTaskById(taskId) {
+    const tasks = this.getTasks()
+
+    return tasks.find(task => task.id === taskId)
+    },
+
     addTask(task) {
     const tasks = this.getTasks()
 

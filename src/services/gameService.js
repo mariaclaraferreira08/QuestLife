@@ -49,6 +49,19 @@ const gameService = {
             coins: newCoins
         })
     },
+    
+    completeTaskAndReward(task) {
+    const player = playerService.getPlayer()
+    const reward = this.getDifficulty(task.difficulty)
+
+    const newXP = player.xp + reward.xp
+    const newCoins = player.coins + reward.coins
+
+    return playerService.updatePlayer({
+        xp: newXP,
+        coins: newCoins
+    })
+},
 
     failTask(difficulty) {
     const reward = this.getDifficulty(difficulty)
