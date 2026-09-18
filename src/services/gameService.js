@@ -80,6 +80,22 @@ const gameService = {
     return this.completeTaskAndReward(task)
 },
 
+    failTaskById(taskId) {
+    const task = taskService.getTaskById(taskId)
+
+    if (!task) {
+        return null
+    }
+
+    if (task.completed || task.failed) {
+        return null
+    }
+
+    taskService.failTask(taskId)
+
+    return this.failTask(task.difficulty)
+},
+
     failTask(difficulty) {
     const reward = this.getDifficulty(difficulty)
 

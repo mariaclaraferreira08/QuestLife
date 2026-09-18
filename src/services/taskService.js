@@ -23,8 +23,9 @@ const taskService = {
     const tasks = this.getTasks()
 
     const newTask = {
-        ...task,
-        id: Date.now()
+    ...task,
+    id: Date.now(),
+    failed: false
     }
 
     tasks.push(newTask)
@@ -56,6 +57,12 @@ const taskService = {
     completeTask(taskId) {
     return this.updateTask(taskId, {
         completed: true
+    })
+},
+
+    failTask(taskId) {
+    return this.updateTask(taskId, {
+        failed: true
     })
 },
 
