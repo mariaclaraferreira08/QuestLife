@@ -5,12 +5,26 @@ import { difficulties } from "../data/difficulties"
 const gameService = {
     addXP(amount) {
         const player = playerService.getPlayer()
-
         const newXP = player.xp + amount
-
-        return playerService.updatePlayer({
+        playerService.updatePlayer({
             xp: newXP
         })
+        return this.levelUp()
+    },
+    levelUp() {
+        const player = playerService.getPlayer()
+        let level = player.level
+        let xp = player.xp
+        
+        while (xp >= 100) {
+            xp = xp - 100
+            level = level + 1
+        }
+
+        return playerService.updatePlayer({
+            level: level,
+            xp: xp
+            })
     },
 
     addCoins(amount) {
@@ -52,58 +66,53 @@ const gameService = {
     },
 
     completeTaskAndReward(task) {
-    const player = playerService.getPlayer()
-    const reward = this.getDifficulty(task.difficulty)
+        const reward = this.getDifficulty(task.difficulty)
 
-    const newXP = player.xp + reward.xp
-    const newCoins = player.coins + reward.coins
+        this.addXP(reward.xp)
 
-    return playerService.updatePlayer({
-        xp: newXP,
-        coins: newCoins
-    })
-},
+        return this.addCoins(reward.coins)
+    },
 
     completeTaskById(taskId) {
-    const task = taskService.getTaskById(taskId)
+        const task = taskService.getTaskById(taskId)
 
-    if (!task) {
-        return null
-    }
+        if (!task) {
+            return null
+        }
 
-    if (task.completed) {
-        return null
-    }
+        if (task.completed) {
+            return null
+        }
 
-    taskService.completeTask(taskId)
+        taskService.completeTask(taskId)
 
-    return this.completeTaskAndReward(task)
-},
+        return this.completeTaskAndReward(task)
+    },
 
     failTaskById(taskId) {
-    const task = taskService.getTaskById(taskId)
+        const task = taskService.getTaskById(taskId)
 
-    if (!task) {
-        return null
-    }
+        if (!task) {
+            return null
+        }
 
-    if (task.completed || task.failed) {
-        return null
-    }
+        if (task.completed || task.failed) {
+            return null
+        }
 
-    taskService.failTask(taskId)
+        taskService.failTask(taskId)
 
-    return this.failTask(task.difficulty)
-},
+        return this.failTask(task.difficulty)
+    },
 
     failTask(difficulty) {
-    const reward = this.getDifficulty(difficulty)
+        const reward = this.getDifficulty(difficulty)
 
-    const player = playerService.getPlayer()
+        const player = playerService.getPlayer()
 
-    const newHealth = Math.max(0, player.health - reward.damage)
+        const newHealth = Math.max(0, player.health - reward.damage)
 
-    return playerService.updatePlayer({
+        return playerService.updatePlayer({
         health: newHealth
             })
         }
