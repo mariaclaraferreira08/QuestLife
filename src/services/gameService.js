@@ -5,17 +5,22 @@ import { difficulties } from "../data/difficulties"
 const gameService = {
     addXP(amount) {
         const player = playerService.getPlayer()
+
         const newXP = player.xp + amount
+
         playerService.updatePlayer({
             xp: newXP
         })
+
         return this.levelUp()
     },
+
     levelUp() {
         const player = playerService.getPlayer()
+
         let level = player.level
         let xp = player.xp
-        
+
         while (xp >= 100) {
             xp = xp - 100
             level = level + 1
@@ -24,7 +29,7 @@ const gameService = {
         return playerService.updatePlayer({
             level: level,
             xp: xp
-            })
+        })
     },
 
     addCoins(amount) {
@@ -51,20 +56,6 @@ const gameService = {
         return difficulties[difficulty]
     },
 
-    completeTask(difficulty) {
-        const reward = this.getDifficulty(difficulty)
-
-        const player = playerService.getPlayer()
-
-        const newXP = player.xp + reward.xp
-        const newCoins = player.coins + reward.coins
-
-        return playerService.updatePlayer({
-            xp: newXP,
-            coins: newCoins
-        })
-    },
-
     completeTaskAndReward(task) {
         const reward = this.getDifficulty(task.difficulty)
 
@@ -80,7 +71,7 @@ const gameService = {
             return null
         }
 
-        if (task.completed) {
+        if (task.completed || task.failed) {
             return null
         }
 
@@ -108,13 +99,8 @@ const gameService = {
     failTask(difficulty) {
         const reward = this.getDifficulty(difficulty)
 
-        const player = playerService.getPlayer()
+        return this.takeDamage(reward.damage)
+    }
+}
 
-        const newHealth = Math.max(0, player.health - reward.damage)
-
-        return playerService.updatePlayer({
-        health: newHealth
-            })
-        }
-  }
 export default gameService
