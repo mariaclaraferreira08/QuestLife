@@ -21,6 +21,7 @@ const habitService = {
             id: crypto.randomUUID(),
             streak: 0,
             bestStreak: 0,
+            previousStreak: 0,
             lastCompletedAt: null,
             failed: false
         }
@@ -122,6 +123,7 @@ const habitService = {
         }
 
         return this.updateHabit(habitId, {
+            previousStreak: habit.streak,
             streak: 0,
             failed: true
         })
