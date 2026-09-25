@@ -4,76 +4,113 @@ const TASKS_KEY = "tasks"
 
 const taskService = {
     getTasks() {
-        const tasks = storageService.get(TASKS_KEY)
-
-        if (!tasks) {
-            return []
-        }
-
-        return tasks
+        return storageService.get(TASKS_KEY) || []
     },
 
     getTaskById(taskId) {
-    const tasks = this.getTasks()
-
-    return tasks.find(task => task.id === taskId)
+        return this.getTasks().find(task => task.id === taskId)
     },
 
     addTask(task) {
-    const tasks = this.getTasks()
+        const tasks = this.getTasks()
 
-    const newTask = {
-    ...task,
-    id: Date.now(),
-    failed: false
-    }
+        const newTask = {
+            ...task,
+            id: crypto.randomUUID(),
+            completed: false,
+            failed: false,
+            subtasks: []
+        }
 
-    tasks.push(newTask)
+        tasks.push(newTask)
 
-    storageService.save(TASKS_KEY, tasks)
+        storageService.save(TASKS_KEY, tasks)
 
-    return tasks
+        return newTask
     },
 
     updateTask(taskId, updatedData) {
         const tasks = this.getTasks()
 
-        const updatedTasks = tasks.map(task => {
-            if (task.id === taskId) {
-                return {
-                    ...task,
-                    ...updatedData
-                }
-            }
+        const updatedTasks = tasks.map(task =>
+            task.id === taskId
+                ? { ...task, ...updatedData }
+                : task
+        )
 
-            return task
+        storageService.save(TASKS_KEY, updatedTasks)
+
+        return this.getTaskById(taskId)
+    },
+
+    completeTask(taskId) {
+        return this.updateTask(taskId, {
+            completed: true
         })
+    },
+
+    failTask(taskId) {
+        return this.updateTask(taskId, {
+            failed: true
+        })
+    },
+
+    removeTask(taskId) {
+        const tasks = this.getTasks()
+
+        const updatedTasks = tasks.filter(
+            task => task.id !== taskId
+        )
 
         storageService.save(TASKS_KEY, updatedTasks)
 
         return updatedTasks
     },
 
-    completeTask(taskId) {
-    return this.updateTask(taskId, {
-        completed: true
-    })
-},
+    addSubtask(taskId, title) {
+        const task = this.getTaskById(taskId)
 
-    failTask(taskId) {
-    return this.updateTask(taskId, {
-        failed: true
-    })
-},
+        if (!task) {
+            return null
+        }
 
-    removeTask(taskId) {
-        const tasks = this.getTasks()
+      const newSubtask = {
+        id: crypto.randomUUID(),
+        title: title,
+        completed: false
+}
 
-        const updatedTasks = tasks.filter(task => task.id !== taskId)
+        const subtasks = [
+            ...(task.subtasks || []),
+            newSubtask
+        ]
 
-        storageService.save(TASKS_KEY, updatedTasks)
+        return this.updateTask(taskId, {
+            subtasks: subtasks
+        })
+    },
 
-        return updatedTasks
+    toggleSubtask(taskId, subtaskId) {
+        const task = this.getTaskById(taskId)
+
+        if (!task) {
+            return null
+        }
+
+        const subtasks = (task.subtasks || []).map(subtask => {
+            if (subtask.id === subtaskId) {
+                return {
+                    ...subtask,
+                    completed: !subtask.completed
+                }
+            }
+
+            return subtask
+        })
+
+        return this.updateTask(taskId, {
+            subtasks: subtasks
+        })
     }
 }
 
