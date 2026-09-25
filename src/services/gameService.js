@@ -1,5 +1,6 @@
 import playerService from "./playerService"
 import taskService from "./taskService"
+import habitService from "./habitService"
 import { difficulties } from "../data/difficulties"
 
 const gameService = {
@@ -45,7 +46,10 @@ const gameService = {
     takeDamage(amount) {
         const player = playerService.getPlayer()
 
-        const newHealth = Math.max(0, player.health - amount)
+        const newHealth = Math.max(
+            0,
+            player.health - amount
+        )
 
         return playerService.updatePlayer({
             health: newHealth
@@ -56,8 +60,14 @@ const gameService = {
         return difficulties[difficulty]
     },
 
+    // =========================
+    // TAREFAS
+    // =========================
+
     completeTaskAndReward(task) {
-        const reward = this.getDifficulty(task.difficulty)
+        const reward = this.getDifficulty(
+            task.difficulty
+        )
 
         this.addXP(reward.xp)
 
@@ -97,7 +107,55 @@ const gameService = {
     },
 
     failTask(difficulty) {
-        const reward = this.getDifficulty(difficulty)
+        const reward = this.getDifficulty(
+            difficulty
+        )
+
+        return this.takeDamage(reward.damage)
+    },
+
+    // =========================
+    // HÁBITOS
+    // =========================
+
+    completeHabitById(habitId) {
+        const habit = habitService.getHabitById(
+            habitId
+        )
+
+        if (!habit) {
+            return null
+        }
+
+        if (!habitService.canCompleteToday(habitId)) {
+            return null
+        }
+
+        const reward = this.getDifficulty(
+            habit.difficulty
+        )
+
+        habitService.completeHabit(habitId)
+
+        this.addXP(reward.xp)
+
+        return this.addCoins(reward.coins)
+    },
+
+    failHabitById(habitId) {
+        const habit = habitService.getHabitById(
+            habitId
+        )
+
+        if (!habit) {
+            return null
+        }
+
+        const reward = this.getDifficulty(
+            habit.difficulty
+        )
+
+        habitService.failHabit(habitId)
 
         return this.takeDamage(reward.damage)
     }
