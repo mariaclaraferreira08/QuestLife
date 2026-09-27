@@ -1,6 +1,6 @@
 import playerService from "./playerService"
 import taskService from "./taskService"
-import habitService from "./habitService"
+
 import { difficulties } from "../data/difficulties"
 
 const gameService = {
@@ -60,14 +60,14 @@ const gameService = {
         return difficulties[difficulty]
     },
 
-    // =========================
-    // TAREFAS
-    // =========================
-
     completeTaskAndReward(task) {
         const reward = this.getDifficulty(
             task.difficulty
         )
+
+        if (!reward) {
+            return null
+        }
 
         this.addXP(reward.xp)
 
@@ -78,84 +78,77 @@ const gameService = {
         const task = taskService.getTaskById(taskId)
 
         if (!task) {
-            return null
+            return {
+                success: false,
+                reason: "task-not-found"
+            }
         }
 
         if (task.completed || task.failed) {
-            return null
+            return {
+                success: false,
+                reason: "task-finished"
+            }
+        }
+
+        const subtasks = task.subtasks || []
+
+        const hasPendingSubtasks = subtasks.some(
+            subtask => !subtask.completed
+        )
+
+        if (hasPendingSubtasks) {
+            return {
+                success: false,
+                reason: "pending-subtasks"
+            }
         }
 
         taskService.completeTask(taskId)
 
-        return this.completeTaskAndReward(task)
+        const player = this.completeTaskAndReward(task)
+
+        return {
+            success: true,
+            player: player
+        }
     },
 
     failTaskById(taskId) {
         const task = taskService.getTaskById(taskId)
 
         if (!task) {
-            return null
+            return {
+                success: false,
+                reason: "task-not-found"
+            }
         }
 
         if (task.completed || task.failed) {
-            return null
+            return {
+                success: false,
+                reason: "task-finished"
+            }
         }
 
         taskService.failTask(taskId)
 
-        return this.failTask(task.difficulty)
+        const player = this.failTask(
+            task.difficulty
+        )
+
+        return {
+            success: true,
+            player: player
+        }
     },
 
     failTask(difficulty) {
-        const reward = this.getDifficulty(
-            difficulty
-        )
+        const reward = this.getDifficulty(difficulty)
 
-        return this.takeDamage(reward.damage)
-    },
-
-    // =========================
-    // HÁBITOS
-    // =========================
-
-    completeHabitById(habitId) {
-        const habit = habitService.getHabitById(
-            habitId
-        )
-
-        if (!habit) {
+        if (!reward) {
             return null
         }
-
-        if (!habitService.canCompleteToday(habitId)) {
-            return null
-        }
-
-        const reward = this.getDifficulty(
-            habit.difficulty
-        )
-
-        habitService.completeHabit(habitId)
-
-        this.addXP(reward.xp)
-
-        return this.addCoins(reward.coins)
-    },
-
-    failHabitById(habitId) {
-        const habit = habitService.getHabitById(
-            habitId
-        )
-
-        if (!habit) {
-            return null
-        }
-
-        const reward = this.getDifficulty(
-            habit.difficulty
-        )
-
-        habitService.failHabit(habitId)
 
         return this.takeDamage(reward.damage)
     }

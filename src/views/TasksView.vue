@@ -1,167 +1,156 @@
 <script setup>
-import { ref, onMounted } from "vue"
+import { ref, onMounted } from 'vue'
 
-import TaskList from "../components/TaskList.vue"
+import TaskList from '../components/TaskList.vue'
 
-import taskService from "../services/taskService"
-import gameService from "../services/gameService"
+import taskService from '../services/taskService'
+import gameService from '../services/gameService'
 
 const tasks = ref([])
 
 function refreshTasks() {
-    tasks.value = [
-        ...taskService.getTasks()
-    ]
+  tasks.value = [...taskService.getTasks()]
 }
 
 function completeTask(taskId) {
-    gameService.completeTaskById(taskId)
+  const result = gameService.completeTaskById(taskId)
 
-    refreshTasks()
+  if (result && result.success === false && result.reason === 'pending-subtasks') {
+    alert('Conclua todas as etapas antes de finalizar a missão.')
+
+    return
+  }
+
+  if (result && result.success === false && result.reason === 'task-finished') {
+    return
+  }
+
+  refreshTasks()
 }
 
 function failTask(taskId) {
-    gameService.failTaskById(taskId)
+  gameService.failTaskById(taskId)
 
-    refreshTasks()
+  refreshTasks()
 }
 
 function removeTask(taskId) {
-    taskService.removeTask(taskId)
+  taskService.removeTask(taskId)
 
-    refreshTasks()
+  refreshTasks()
 }
 
 function addSubtask(taskId, title) {
-    taskService.addSubtask(
-        taskId,
-        title
-    )
+  taskService.addSubtask(taskId, title)
 
-    refreshTasks()
+  refreshTasks()
 }
 
 function toggleSubtask(taskId, subtaskId) {
-    taskService.toggleSubtask(
-        taskId,
-        subtaskId
-    )
+  taskService.toggleSubtask(taskId, subtaskId)
 
-    refreshTasks()
+  refreshTasks()
 }
 
 onMounted(() => {
-    refreshTasks()
+  refreshTasks()
 })
 </script>
 
 <template>
-    <section class="tasks-page">
-        <header class="tasks-header">
-            <div>
-                <span class="eyebrow">
-                    QUEST LOG
-                </span>
+  <section class="tasks-page">
+    <header class="tasks-header">
+      <div>
+        <span class="eyebrow"> QUEST LOG </span>
 
-                <h1>Suas missões</h1>
+        <h1>Suas missões</h1>
 
-                <p>
-                    Complete missões para ganhar XP e moedas.
-                </p>
-            </div>
+        <p>Complete missões para ganhar XP e moedas.</p>
+      </div>
 
-            <RouterLink
-                to="/tasks/new"
-                class="new-task-button"
-            >
-                + NOVA MISSÃO
-            </RouterLink>
-        </header>
+      <RouterLink to="/tasks/new" class="new-task-button"> + NOVA MISSÃO </RouterLink>
+    </header>
 
-        <TaskList
-            :tasks="tasks"
-            @complete-task="completeTask"
-            @fail-task="failTask"
-            @remove-task="removeTask"
-            @add-subtask="addSubtask"
-            @toggle-subtask="toggleSubtask"
-        />
-    </section>
+    <TaskList
+      :tasks="tasks"
+      @complete-task="completeTask"
+      @fail-task="failTask"
+      @remove-task="removeTask"
+      @add-subtask="addSubtask"
+      @toggle-subtask="toggleSubtask"
+    />
+  </section>
 </template>
 
 <style scoped>
 .tasks-page {
-    width: 100%;
-    max-width: 1050px;
+  width: 100%;
+  max-width: 1050px;
 
-    margin: 0 auto;
+  margin: 0 auto;
 
-    color: #eef1f7;
+  color: #eef1f7;
 }
 
 .tasks-header {
-    display: flex;
+  display: flex;
 
-    align-items: center;
-    justify-content: space-between;
+  align-items: center;
+  justify-content: space-between;
 
-    gap: 30px;
+  gap: 30px;
 
-    margin-bottom: 30px;
-    padding-bottom: 22px;
+  margin-bottom: 30px;
+  padding-bottom: 22px;
 
-    border-bottom: 1px solid #29364a;
+  border-bottom: 1px solid #29364a;
 }
 
 .eyebrow {
-    color: #ad6df1;
+  color: #ad6df1;
 
-    font-size: 11px;
+  font-size: 11px;
 
-    letter-spacing: 2px;
+  letter-spacing: 2px;
 }
 
 .tasks-header h1 {
-    margin: 5px 0 7px;
+  margin: 5px 0 7px;
 
-    font-size: 27px;
+  font-size: 27px;
 }
 
 .tasks-header p {
-    margin: 0;
+  margin: 0;
 
-    color: #8793a7;
+  color: #8793a7;
 
-    font-size: 13px;
+  font-size: 13px;
 }
 
 .new-task-button {
-    padding: 12px 18px;
+  padding: 12px 18px;
 
-    color: white;
-    text-decoration: none;
+  color: white;
+  text-decoration: none;
 
-    background: linear-gradient(
-        90deg,
-        #7227dc,
-        #a928ef
-    );
+  background: linear-gradient(90deg, #7227dc, #a928ef);
 
-    border: 1px solid #aa5cf2;
-    border-radius: 7px;
+  border: 1px solid #aa5cf2;
+  border-radius: 7px;
 
-    font-size: 12px;
-    font-weight: bold;
+  font-size: 12px;
+  font-weight: bold;
 }
 
 @media (max-width: 700px) {
-    .tasks-header {
-        align-items: stretch;
-        flex-direction: column;
-    }
+  .tasks-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
 
-    .new-task-button {
-        text-align: center;
-    }
+  .new-task-button {
+    text-align: center;
+  }
 }
 </style>
