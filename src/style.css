@@ -1,0 +1,62 @@
+* {
+    box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+    min-height: 100%;
+    margin: 0;
+}
+
+body {
+    min-width: 320px;
+
+    background: #0d1421;
+    color: #e8ecf5;
+
+    font-family:
+        "Courier New",
+        Courier,
+        monospace;
+}
+
+button,
+input,
+textarea,
+select {
+    font: inherit;
+}
+
+button,
+a {
+    transition: 0.2s ease;
+}
+
+button {
+    cursor: pointer;
+}
+
+::selection {
+    background: #8c2cff;
+    color: white;
+}
+
+/* Scrollbar */
+
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #0d1421;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #354158;
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #8141c9;
+}
