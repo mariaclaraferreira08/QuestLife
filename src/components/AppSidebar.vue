@@ -1,7 +1,7 @@
 <script setup>
 import playerService from "../services/playerService"
 
-const player = playerService.getPlayer()
+const player = playerService.player
 </script>
 
 <template>
