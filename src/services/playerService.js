@@ -7,13 +7,39 @@ const PLAYER_KEY = "player"
 
 const storedPlayer = storageService.get(PLAYER_KEY)
 
-if (!storedPlayer) {
-    storageService.save(PLAYER_KEY, defaultPlayer)
-}
+/*
+ * Se já existe jogador salvo, preservamos os dados.
+ *
+ * Se health estiver ausente ou inválido,
+ * corrigimos para 100.
+ */
+const initialPlayer = storedPlayer
+    ? {
+        ...defaultPlayer,
+        ...storedPlayer,
 
-const player = ref(
-    storedPlayer || { ...defaultPlayer }
+        health:
+            typeof storedPlayer.health === "number"
+                ? storedPlayer.health
+                : 100,
+
+        maxHealth:
+            typeof storedPlayer.maxHealth === "number"
+                ? storedPlayer.maxHealth
+                : 100
+    }
+    : {
+        ...defaultPlayer,
+        health: 100,
+        maxHealth: 100
+    }
+
+storageService.save(
+    PLAYER_KEY,
+    initialPlayer
 )
+
+const player = ref(initialPlayer)
 
 const playerService = {
     player,
@@ -36,6 +62,13 @@ const playerService = {
         )
 
         return updatedPlayer
+    },
+
+    resetHealth() {
+        return this.updatePlayer({
+            health:
+                player.value.maxHealth || 100
+        })
     }
 }
 
