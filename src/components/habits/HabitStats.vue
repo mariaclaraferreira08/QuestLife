@@ -1,35 +1,96 @@
 <script setup>
-defineProps({
+import { computed } from "vue"
+
+const props = defineProps({
     habit: {
         type: Object,
         required: true
     }
 })
+
+/*
+ * Frequência do hábito.
+ *
+ * Hábitos antigos que não possuem
+ * frequency serão tratados como diários.
+ */
+const frequency = computed(() => {
+    return props.habit.frequency || "daily"
+})
+
+/*
+ * Retorna a unidade correta da sequência
+ * de acordo com a frequência.
+ *
+ * daily   -> dia / dias
+ * weekly  -> semana / semanas
+ * monthly -> mês / meses
+ */
+function streakUnit(value) {
+    if (frequency.value === "weekly") {
+        return value === 1
+            ? "semana"
+            : "semanas"
+    }
+
+    if (frequency.value === "monthly") {
+        return value === 1
+            ? "mês"
+            : "meses"
+    }
+
+    return value === 1
+        ? "dia"
+        : "dias"
+}
+
+/*
+ * Valores protegidos para evitar
+ * undefined na interface.
+ */
+const currentStreak = computed(() => {
+    return props.habit.streak || 0
+})
+
+const bestStreak = computed(() => {
+    return props.habit.bestStreak || 0
+})
 </script>
 
 <template>
     <section class="habit-stats">
+
+        <!-- =====================
+             SEQUÊNCIA ATUAL
+             ===================== -->
+
         <div class="stat-card">
             <span class="stat-label">
                 SEQUÊNCIA ATUAL
             </span>
 
             <div class="stat-value">
-                <span class="icon">🔥</span>
+                <span class="icon">
+                    🔥
+                </span>
 
                 <strong>
-                    {{ habit.streak || 0 }}
+                    {{ currentStreak }}
                 </strong>
 
                 <small>
                     {{
-                        (habit.streak || 0) === 1
-                            ? "dia"
-                            : "dias"
+                        streakUnit(
+                            currentStreak
+                        )
                     }}
                 </small>
             </div>
         </div>
+
+        <!-- =====================
+             MELHOR SEQUÊNCIA
+             ===================== -->
 
         <div class="stat-card">
             <span class="stat-label">
@@ -37,21 +98,24 @@ defineProps({
             </span>
 
             <div class="stat-value">
-                <span class="icon">🏆</span>
+                <span class="icon">
+                    🏆
+                </span>
 
                 <strong>
-                    {{ habit.bestStreak || 0 }}
+                    {{ bestStreak }}
                 </strong>
 
                 <small>
                     {{
-                        (habit.bestStreak || 0) === 1
-                            ? "dia"
-                            : "dias"
+                        streakUnit(
+                            bestStreak
+                        )
                     }}
                 </small>
             </div>
         </div>
+
     </section>
 </template>
 

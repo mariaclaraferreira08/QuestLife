@@ -26,6 +26,10 @@ const difficultyNames = {
     legendary: "LENDÁRIO"
 }
 
+const frequency = computed(() => {
+    return props.habit.frequency || "daily"
+})
+
 const difficultyName = computed(() => {
     return (
         difficultyNames[props.habit.difficulty] ||
@@ -46,40 +50,56 @@ const alreadyCompletedToday = computed(() => {
     const today = new Date()
 
     return (
-        lastCompleted.getFullYear() ===
-            today.getFullYear() &&
-        lastCompleted.getMonth() ===
-            today.getMonth() &&
-        lastCompleted.getDate() ===
-            today.getDate()
+        lastCompleted.getFullYear() === today.getFullYear() &&
+        lastCompleted.getMonth() === today.getMonth() &&
+        lastCompleted.getDate() === today.getDate()
     )
 })
 
 const scheduledToday = computed(() => {
-    if (
-        !props.habit.frequency ||
-        props.habit.frequency === "daily"
-    ) {
+    /*
+     * Diário:
+     * pode ser concluído todos os dias.
+     */
+    if (frequency.value === "daily") {
         return true
     }
 
-    const dayNames = [
-        "sunday",
-        "monday",
-        "tuesday",
-        "wednesday",
-        "thursday",
-        "friday",
-        "saturday"
-    ]
+    /*
+     * Mensal:
+     * pode ser concluído em qualquer dia,
+     * desde que ainda não tenha sido
+     * concluído hoje.
+     */
+    if (frequency.value === "monthly") {
+        return true
+    }
 
-    const today = dayNames[
-        new Date().getDay()
-    ]
+    /*
+     * Semanal:
+     * só pode ser concluído nos dias
+     * escolhidos pelo usuário.
+     */
+    if (frequency.value === "weekly") {
+        const dayNames = [
+            "sunday",
+            "monday",
+            "tuesday",
+            "wednesday",
+            "thursday",
+            "friday",
+            "saturday"
+        ]
 
-    return (
-        props.habit.daysOfWeek || []
-    ).includes(today)
+        const today =
+            dayNames[new Date().getDay()]
+
+        return (
+            props.habit.daysOfWeek || []
+        ).includes(today)
+    }
+
+    return false
 })
 
 const canComplete = computed(() => {
@@ -90,20 +110,40 @@ const canComplete = computed(() => {
     )
 })
 
+const canFailManually = computed(() => {
+    /*
+     * Apenas hábitos diários possuem
+     * falha manual.
+     *
+     * Semanal e mensal são avaliados
+     * pela meta do período.
+     */
+    return frequency.value === "daily"
+})
+
 function completeHabit() {
     if (!canComplete.value) {
         return
     }
 
-    emit("complete", props.habit.id)
+    emit(
+        "complete",
+        props.habit.id
+    )
 }
 
 function failHabit() {
-    if (props.habit.failed) {
+    if (
+        !canFailManually.value ||
+        props.habit.failed
+    ) {
         return
     }
 
-    emit("fail", props.habit.id)
+    emit(
+        "fail",
+        props.habit.id
+    )
 }
 
 function removeHabit() {
@@ -115,7 +155,10 @@ function removeHabit() {
         return
     }
 
-    emit("remove", props.habit.id)
+    emit(
+        "remove",
+        props.habit.id
+    )
 }
 
 function restoreStreak() {
@@ -153,6 +196,16 @@ function restoreStreak() {
                         >
                             {{ difficultyName }}
                         </span>
+
+                        <span class="frequency-badge">
+                            {{
+                                frequency === "daily"
+                                    ? "DIÁRIO"
+                                    : frequency === "weekly"
+                                        ? "SEMANAL"
+                                        : "MENSAL"
+                            }}
+                        </span>
                     </div>
 
                     <p v-if="habit.description">
@@ -171,7 +224,7 @@ function restoreStreak() {
             </button>
         </header>
 
-        <!-- STATUS DE HOJE -->
+        <!-- STATUS -->
 
         <div
             v-if="alreadyCompletedToday"
@@ -195,13 +248,13 @@ function restoreStreak() {
             PARA HOJE
         </div>
 
-        <!-- CALENDÁRIO -->
+        <!-- PROGRAMAÇÃO / PROGRESSO -->
 
         <HabitSchedule
             :habit="habit"
         />
 
-        <!-- STREAK -->
+        <!-- SEQUÊNCIA -->
 
         <HabitStats
             :habit="habit"
@@ -210,6 +263,8 @@ function restoreStreak() {
         <!-- AÇÕES -->
 
         <footer class="habit-actions">
+            <!-- HÁBITO QUE JÁ FALHOU -->
+
             <template v-if="habit.failed">
                 <button
                     type="button"
@@ -219,6 +274,8 @@ function restoreStreak() {
                     🧪 RECUPERAR SEQUÊNCIA
                 </button>
             </template>
+
+            <!-- HÁBITO ATIVO -->
 
             <template v-else>
                 <button
@@ -244,7 +301,13 @@ function restoreStreak() {
                     </template>
                 </button>
 
+                <!--
+                    Falha manual existe
+                    somente para hábitos diários.
+                -->
+
                 <button
+                    v-if="canFailManually"
                     type="button"
                     class="fail-button"
                     @click="failHabit"
@@ -344,7 +407,8 @@ function restoreStreak() {
 
 /* DIFICULDADE */
 
-.difficulty {
+.difficulty,
+.frequency-badge {
     padding: 4px 8px;
 
     border: 1px solid;
@@ -372,6 +436,15 @@ function restoreStreak() {
 
 .difficulty.legendary {
     color: #c27cff;
+}
+
+.frequency-badge {
+    color: #b477e8;
+
+    background:
+        rgba(138, 65, 194, 0.08);
+
+    border-color: #674082;
 }
 
 /* EXCLUIR */
@@ -521,6 +594,8 @@ function restoreStreak() {
         0 0 14px
         rgba(157, 44, 225, 0.2);
 }
+
+/* RESPONSIVO */
 
 @media (max-width: 600px) {
     .habit-header {

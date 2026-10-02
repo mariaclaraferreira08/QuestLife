@@ -85,11 +85,9 @@ function increase() {
 
             <p>
                 Ao completar
-
                 <strong>
                     {{ modelValue }}/{{ modelValue }}
                 </strong>
-
                 durante o mês, sua sequência mensal aumenta.
             </p>
         </div>

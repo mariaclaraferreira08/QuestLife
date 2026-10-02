@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed, watch } from "vue"
 
+import DifficultySelector from "./form/DifficultySelector.vue"
 import FrequencySelector from "./form/FrequencySelector.vue"
 import WeeklySelector from "./form/WeeklySelector.vue"
 import MonthlySelector from "./form/MonthlySelector.vue"
@@ -12,6 +13,7 @@ const emit = defineEmits([
 
 const title = ref("")
 const description = ref("")
+
 const difficulty = ref("easy")
 
 const frequency = ref("daily")
@@ -20,34 +22,9 @@ const selectedDays = ref([])
 
 const monthlyTarget = ref(4)
 
-const difficulties = [
-    {
-        id: "trivial",
-        name: "Trivial",
-        stars: "✦"
-    },
-    {
-        id: "easy",
-        name: "Fácil",
-        stars: "✦✦"
-    },
-    {
-        id: "medium",
-        name: "Médio",
-        stars: "✦✦✦"
-    },
-    {
-        id: "hard",
-        name: "Difícil",
-        stars: "✦✦✦✦"
-    },
-    {
-        id: "legendary",
-        name: "Lendário",
-        stars: "✦✦✦✦✦"
-    }
-]
-
+/*
+ * Texto utilizado no resumo do hábito.
+ */
 const frequencyDescription = computed(() => {
     if (frequency.value === "daily") {
         return "Todos os dias"
@@ -76,8 +53,16 @@ const frequencyDescription = computed(() => {
     return ""
 })
 
+/*
+ * Quando o usuário sai da frequência semanal,
+ * limpamos os dias que estavam selecionados.
+ *
+ * Assim não ficam dias antigos escondidos
+ * dentro de um hábito diário ou mensal.
+ */
 watch(
     frequency,
+
     (newFrequency, oldFrequency) => {
         if (
             oldFrequency === "weekly" &&
@@ -88,21 +73,16 @@ watch(
     }
 )
 
-function getCurrentMonthKey() {
-    const today = new Date()
-
-    const year = today.getFullYear()
-
-    const month = String(
-        today.getMonth() + 1
-    ).padStart(2, "0")
-
-    return `${year}-${month}`
-}
-
+/*
+ * Cria o objeto que será enviado para
+ * HabitsView e depois para habitService.
+ */
 function createHabit() {
     const habitTitle = title.value.trim()
 
+    /*
+     * O hábito precisa ter um nome.
+     */
     if (!habitTitle) {
         alert(
             "Digite o nome do hábito."
@@ -111,6 +91,10 @@ function createHabit() {
         return
     }
 
+    /*
+     * Um hábito semanal precisa ter
+     * pelo menos um dia selecionado.
+     */
     if (
         frequency.value === "weekly" &&
         selectedDays.value.length === 0
@@ -122,6 +106,10 @@ function createHabit() {
         return
     }
 
+    /*
+     * Dados básicos enviados para
+     * habitService.addHabit().
+     */
     const habitData = {
         title:
             habitTitle,
@@ -135,24 +123,45 @@ function createHabit() {
         frequency:
             frequency.value,
 
+        /*
+         * Só hábitos semanais possuem
+         * dias específicos.
+         */
         daysOfWeek:
             frequency.value === "weekly"
                 ? [...selectedDays.value]
                 : [],
 
-        monthlyTarget:
+        /*
+         * Meta semanal.
+         *
+         * Por enquanto, cada dia escolhido
+         * representa uma conclusão esperada
+         * durante a semana.
+         *
+         * Exemplo:
+         *
+         * SEG + QUA + SEX
+         *
+         * weeklyGoal = 3
+         */
+        weeklyGoal:
+            frequency.value === "weekly"
+                ? selectedDays.value.length
+                : null,
+
+        /*
+         * Meta mensal.
+         *
+         * Exemplo:
+         *
+         * "Ler livro 4 vezes por mês"
+         *
+         * monthlyGoal = 4
+         */
+        monthlyGoal:
             frequency.value === "monthly"
                 ? monthlyTarget.value
-                : null,
-
-        monthlyProgress:
-            frequency.value === "monthly"
-                ? 0
-                : null,
-
-        monthlyPeriod:
-            frequency.value === "monthly"
-                ? getCurrentMonthKey()
                 : null
     }
 
@@ -162,6 +171,9 @@ function createHabit() {
     )
 }
 
+/*
+ * Fecha/cancela o formulário.
+ */
 function cancel() {
     emit("cancel")
 }
@@ -169,6 +181,9 @@ function cancel() {
 
 <template>
     <section class="habit-form">
+
+        <!-- CABEÇALHO -->
+
         <div class="form-heading">
             <span>
                 NEW ROUTINE
@@ -215,35 +230,9 @@ function cancel() {
 
         <!-- DIFICULDADE -->
 
-        <div class="form-section">
-            <div class="section-label">
-                DIFICULDADE
-            </div>
-
-            <div class="difficulty-grid">
-                <button
-                    v-for="item in difficulties"
-                    :key="item.id"
-                    type="button"
-                    class="difficulty-option"
-                    :class="{
-                        selected:
-                            difficulty === item.id
-                    }"
-                    @click="
-                        difficulty = item.id
-                    "
-                >
-                    <strong>
-                        {{ item.stars }}
-                    </strong>
-
-                    <span>
-                        {{ item.name }}
-                    </span>
-                </button>
-            </div>
-        </div>
+        <DifficultySelector
+            v-model="difficulty"
+        />
 
         <!-- FREQUÊNCIA -->
 
@@ -251,14 +240,14 @@ function cancel() {
             v-model="frequency"
         />
 
-        <!-- SEMANAL -->
+        <!-- CONFIGURAÇÃO SEMANAL -->
 
         <WeeklySelector
             v-if="frequency === 'weekly'"
             v-model="selectedDays"
         />
 
-        <!-- MENSAL -->
+        <!-- CONFIGURAÇÃO MENSAL -->
 
         <MonthlySelector
             v-if="frequency === 'monthly'"
@@ -282,9 +271,46 @@ function cancel() {
             <p>
                 {{ frequencyDescription }}
             </p>
+
+            <!--
+                Mostra os dias escolhidos
+                somente para hábitos semanais.
+            -->
+
+            <small
+                v-if="
+                    frequency === 'weekly' &&
+                    selectedDays.length > 0
+                "
+            >
+                {{ selectedDays.length }}
+
+                {{
+                    selectedDays.length === 1
+                        ? "dia selecionado"
+                        : "dias selecionados"
+                }}
+            </small>
+
+            <!--
+                Mostra a meta mensal.
+            -->
+
+            <small
+                v-if="frequency === 'monthly'"
+            >
+                Meta:
+                {{ monthlyTarget }}
+
+                {{
+                    monthlyTarget === 1
+                        ? "conclusão"
+                        : "conclusões"
+                }}
+            </small>
         </div>
 
-        <!-- AÇÕES -->
+        <!-- BOTÕES -->
 
         <div class="form-actions">
             <button
@@ -303,6 +329,7 @@ function cancel() {
                 + CRIAR HÁBITO
             </button>
         </div>
+
     </section>
 </template>
 
@@ -323,10 +350,16 @@ function cancel() {
     border-radius: 12px;
 }
 
-/* CABEÇALHO */
+/* =========================
+   CABEÇALHO
+   ========================= */
 
-.form-heading span,
-.section-label {
+.form-heading {
+    display: flex;
+    flex-direction: column;
+}
+
+.form-heading > span {
     color: #ad6df1;
 
     font-size: 11px;
@@ -347,7 +380,9 @@ function cancel() {
     font-size: 12px;
 }
 
-/* CAMPOS */
+/* =========================
+   CAMPOS
+   ========================= */
 
 .field {
     display: flex;
@@ -381,10 +416,14 @@ function cancel() {
     outline: none;
 
     font-family: inherit;
+
+    transition: 0.2s;
 }
 
 .field textarea {
     resize: vertical;
+
+    min-height: 110px;
 }
 
 .field input::placeholder,
@@ -401,74 +440,9 @@ function cancel() {
         rgba(157, 85, 229, 0.08);
 }
 
-/* SEÇÕES */
-
-.form-section {
-    display: flex;
-    flex-direction: column;
-
-    gap: 12px;
-}
-
-/* DIFICULDADE */
-
-.difficulty-grid {
-    display: grid;
-
-    grid-template-columns:
-        repeat(5, 1fr);
-
-    gap: 10px;
-}
-
-.difficulty-option {
-    min-height: 85px;
-
-    display: flex;
-    flex-direction: column;
-
-    align-items: center;
-    justify-content: center;
-
-    gap: 9px;
-
-    color: #8794a8;
-
-    background: #101927;
-
-    border: 1px solid #354158;
-    border-radius: 9px;
-
-    font-family: inherit;
-
-    cursor: pointer;
-
-    transition: 0.2s;
-}
-
-.difficulty-option:hover {
-    border-color: #75509c;
-}
-
-.difficulty-option strong {
-    color: #b484f1;
-
-    font-size: 15px;
-}
-
-.difficulty-option.selected {
-    color: white;
-
-    background: #3c2861;
-
-    border-color: #a45ce7;
-
-    box-shadow:
-        0 0 14px
-        rgba(164, 92, 231, 0.08);
-}
-
-/* RESUMO */
+/* =========================
+   RESUMO
+   ========================= */
 
 .habit-preview {
     padding: 14px;
@@ -476,7 +450,7 @@ function cancel() {
     display: flex;
     flex-direction: column;
 
-    gap: 5px;
+    gap: 6px;
 
     background: #101927;
 
@@ -492,6 +466,8 @@ function cancel() {
 }
 
 .habit-preview strong {
+    color: #eef1f7;
+
     font-size: 13px;
 }
 
@@ -503,7 +479,15 @@ function cancel() {
     font-size: 11px;
 }
 
-/* AÇÕES */
+.habit-preview small {
+    color: #9a72bf;
+
+    font-size: 10px;
+}
+
+/* =========================
+   BOTÕES
+   ========================= */
 
 .form-actions {
     display: flex;
@@ -543,6 +527,8 @@ function cancel() {
     color: white;
 
     border-color: #536178;
+
+    background: #151f30;
 }
 
 .create-button {
@@ -559,28 +545,35 @@ function cancel() {
 }
 
 .create-button:hover {
+    transform: translateY(-1px);
+
     box-shadow:
         0 0 15px
         rgba(169, 40, 239, 0.2);
 }
 
-/* RESPONSIVO */
-
-@media (max-width: 800px) {
-    .difficulty-grid {
-        grid-template-columns:
-            repeat(3, 1fr);
-    }
+.create-button:active {
+    transform: translateY(0);
 }
 
+/* =========================
+   RESPONSIVO
+   ========================= */
+
 @media (max-width: 550px) {
-    .difficulty-grid {
-        grid-template-columns:
-            repeat(2, 1fr);
+    .habit-form {
+        padding: 18px;
+
+        gap: 20px;
     }
 
     .form-actions {
         flex-direction: column;
+    }
+
+    .cancel-button,
+    .create-button {
+        width: 100%;
     }
 }
 </style>

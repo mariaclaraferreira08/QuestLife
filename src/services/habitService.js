@@ -3,6 +3,10 @@ import storageService from "./storageService"
 const HABITS_KEY = "habits"
 
 const habitService = {
+    // ==========================================
+    // CRUD
+    // ==========================================
+
     getHabits() {
         return storageService.get(HABITS_KEY) || []
     },
@@ -33,6 +37,11 @@ const habitService = {
             monthlyGoal:
                 habit.monthlyGoal || null,
 
+            /*
+             * Guarda o histórico das conclusões.
+             *
+             * Cada item é uma data ISO.
+             */
             completions: [],
 
             streak: 0,
@@ -57,8 +66,8 @@ const habitService = {
     updateHabit(habitId, updatedData) {
         const habits = this.getHabits()
 
-        const updatedHabits =
-            habits.map(habit => {
+        const updatedHabits = habits.map(
+            habit => {
                 if (habit.id === habitId) {
                     return {
                         ...habit,
@@ -67,7 +76,8 @@ const habitService = {
                 }
 
                 return habit
-            })
+            }
+        )
 
         storageService.save(
             HABITS_KEY,
@@ -93,6 +103,10 @@ const habitService = {
 
         return updatedHabits
     },
+
+    // ==========================================
+    // DATAS
+    // ==========================================
 
     isSameDay(dateA, dateB) {
         return (
@@ -123,6 +137,24 @@ const habitService = {
         ]
     },
 
+    /*
+     * Descobre se o hábito pode ser
+     * realizado no dia atual.
+     *
+     * DIÁRIO
+     * - sem dias escolhidos:
+     *   todos os dias.
+     *
+     * - com dias escolhidos:
+     *   apenas nesses dias.
+     *
+     * SEMANAL
+     * - respeita os dias escolhidos.
+     *
+     * MENSAL
+     * - pode ser realizado em qualquer
+     *   dia até atingir a meta do mês.
+     */
     isScheduledForToday(habitId) {
         const habit =
             this.getHabitById(habitId)
@@ -131,21 +163,24 @@ const habitService = {
             return false
         }
 
+        const frequency =
+            habit.frequency || "daily"
+
         /*
-         * Semanal e mensal podem ser
-         * concluídos em qualquer dia,
-         * até atingir a meta.
+         * Mensal não depende de
+         * dias específicos.
          */
-        if (
-            habit.frequency === "weekly" ||
-            habit.frequency === "monthly"
-        ) {
+        if (frequency === "monthly") {
             return true
         }
 
         /*
-         * Compatibilidade com hábitos
-         * antigos e hábitos diários.
+         * Diário ou semanal sem
+         * dias selecionados.
+         *
+         * Mantemos como disponível
+         * para compatibilidade com
+         * hábitos antigos.
          */
         if (
             !habit.daysOfWeek ||
@@ -162,6 +197,14 @@ const habitService = {
         )
     },
 
+    // ==========================================
+    // SEMANA
+    // ==========================================
+
+    /*
+     * Segunda-feira é considerada
+     * o início da semana.
+     */
     getWeekStart(date = new Date()) {
         const result =
             new Date(date)
@@ -183,7 +226,7 @@ const habitService = {
 
         result.setDate(
             result.getDate() +
-            difference
+                difference
         )
 
         return result
@@ -203,8 +246,13 @@ const habitService = {
         }).length
     },
 
+    // ==========================================
+    // MÊS
+    // ==========================================
+
     getMonthCompletions(habit) {
-        const today = new Date()
+        const today =
+            new Date()
 
         return (
             habit.completions || []
@@ -222,6 +270,10 @@ const habitService = {
         }).length
     },
 
+    // ==========================================
+    // PROGRESSO
+    // ==========================================
+
     getCurrentProgress(habitId) {
         const habit =
             this.getHabitById(habitId)
@@ -233,7 +285,9 @@ const habitService = {
             }
         }
 
-        if (habit.frequency === "weekly") {
+        if (
+            habit.frequency === "weekly"
+        ) {
             return {
                 current:
                     this.getWeekCompletions(
@@ -245,7 +299,9 @@ const habitService = {
             }
         }
 
-        if (habit.frequency === "monthly") {
+        if (
+            habit.frequency === "monthly"
+        ) {
             return {
                 current:
                     this.getMonthCompletions(
@@ -263,6 +319,10 @@ const habitService = {
         }
     },
 
+    // ==========================================
+    // PERMISSÃO PARA CONCLUIR
+    // ==========================================
+
     canCompleteToday(habitId) {
         const habit =
             this.getHabitById(habitId)
@@ -274,6 +334,10 @@ const habitService = {
             }
         }
 
+        /*
+         * Primeiro verificamos se
+         * hoje é um dia permitido.
+         */
         if (
             !this.isScheduledForToday(
                 habitId
@@ -287,10 +351,11 @@ const habitService = {
         }
 
         /*
-         * Mantemos no máximo uma
-         * conclusão por dia.
+         * Máximo de uma conclusão
+         * por dia.
          */
-        const today = new Date()
+        const today =
+            new Date()
 
         const completedToday =
             (
@@ -304,14 +369,17 @@ const habitService = {
 
         /*
          * Compatibilidade com hábitos
-         * antigos sem completions[].
+         * antigos que ainda não tinham
+         * completions[].
          */
         let legacyCompletedToday = false
 
         if (
             habit.lastCompletedAt &&
-            (!habit.completions ||
-                habit.completions.length === 0)
+            (
+                !habit.completions ||
+                habit.completions.length === 0
+            )
         ) {
             legacyCompletedToday =
                 this.isSameDay(
@@ -334,11 +402,13 @@ const habitService = {
         }
 
         /*
-         * Se a meta semanal/mensal
-         * já foi atingida, não precisa
-         * continuar contando.
+         * Se a meta semanal já foi
+         * concluída, não permite novas
+         * conclusões nesta semana.
          */
-        if (habit.frequency === "weekly") {
+        if (
+            habit.frequency === "weekly"
+        ) {
             const progress =
                 this.getCurrentProgress(
                     habitId
@@ -356,7 +426,13 @@ const habitService = {
             }
         }
 
-        if (habit.frequency === "monthly") {
+        /*
+         * O mesmo vale para a meta
+         * mensal.
+         */
+        if (
+            habit.frequency === "monthly"
+        ) {
             const progress =
                 this.getCurrentProgress(
                     habitId
@@ -378,6 +454,10 @@ const habitService = {
             allowed: true
         }
     },
+
+    // ==========================================
+    // CONCLUIR HÁBITO
+    // ==========================================
 
     completeHabit(habitId) {
         const habit =
@@ -414,24 +494,31 @@ const habitService = {
         let newStreak =
             habit.streak || 0
 
+        const frequency =
+            habit.frequency || "daily"
+
+        // ======================================
+        // DIÁRIO
+        // ======================================
+
         /*
-         * Diário:
-         * cada conclusão válida
-         * aumenta a streak.
+         * Uma conclusão válida
+         * representa um dia concluído.
          */
-        if (
-            !habit.frequency ||
-            habit.frequency === "daily"
-        ) {
+        if (frequency === "daily") {
             newStreak++
         }
 
+        // ======================================
+        // SEMANAL
+        // ======================================
+
         /*
-         * Semanal:
-         * a streak representa semanas
-         * completas consecutivas.
+         * A streak semanal aumenta
+         * SOMENTE quando a meta daquela
+         * semana é alcançada.
          */
-        if (habit.frequency === "weekly") {
+        if (frequency === "weekly") {
             const currentBefore =
                 this.getWeekCompletions(
                     habit
@@ -451,12 +538,16 @@ const habitService = {
             }
         }
 
+        // ======================================
+        // MENSAL
+        // ======================================
+
         /*
-         * Mensal:
-         * a streak representa meses
-         * completos consecutivos.
+         * A streak mensal aumenta
+         * SOMENTE quando a meta daquele
+         * mês é alcançada.
          */
-        if (habit.frequency === "monthly") {
+        if (frequency === "monthly") {
             const currentBefore =
                 this.getMonthCompletions(
                     habit
@@ -506,6 +597,10 @@ const habitService = {
             habit: updatedHabit
         }
     },
+
+    // ==========================================
+    // FALHAR HÁBITO
+    // ==========================================
 
     failHabit(habitId) {
         const habit =
