@@ -1,6 +1,5 @@
 export const defaultPlayer = {
-    id: 1,
-    name: "Player",
+    name: "Maria",
     level: 1,
     xp: 0,
     coins: 0,

@@ -10,6 +10,12 @@ const gameService = {
         return difficulties[difficulty]
     },
 
+    /*
+     * =========================
+     * JOGADOR
+     * =========================
+     */
+
     addXP(amount) {
         const player =
             playerService.getPlayer()
@@ -50,8 +56,25 @@ const gameService = {
             playerService.getPlayer()
 
         const newCoins =
-            (player.coins || 0) +
-            amount
+            (player.coins || 0) + amount
+
+        return playerService.updatePlayer({
+            coins: newCoins
+        })
+    },
+
+    removeCoins(amount) {
+        const player =
+            playerService.getPlayer()
+
+        const currentCoins =
+            player.coins || 0
+
+        const newCoins =
+            Math.max(
+                0,
+                currentCoins - amount
+            )
 
         return playerService.updatePlayer({
             coins: newCoins
@@ -79,13 +102,11 @@ const gameService = {
     },
 
     /*
-     * Recompensa genérica.
-     *
-     * Pode ser usada por:
-     * - tarefas
-     * - hábitos
-     * - diárias
+     * =========================
+     * RECOMPENSAS
+     * =========================
      */
+
     rewardPlayer(difficulty) {
         const reward =
             this.getDifficulty(
@@ -100,9 +121,38 @@ const gameService = {
             reward.xp
         )
 
-        return this.addCoins(
+        this.addCoins(
             reward.coins
         )
+
+        return playerService.getPlayer()
+    },
+
+    /*
+     * =========================
+     * PENALIDADES
+     * =========================
+     */
+
+    punishPlayer(difficulty) {
+        const reward =
+            this.getDifficulty(
+                difficulty
+            )
+
+        if (!reward) {
+            return null
+        }
+
+        this.takeDamage(
+            reward.damage
+        )
+
+        this.removeCoins(
+            reward.coins
+        )
+
+        return playerService.getPlayer()
     },
 
     /*
@@ -210,17 +260,8 @@ const gameService = {
     },
 
     failTask(difficulty) {
-        const reward =
-            this.getDifficulty(
-                difficulty
-            )
-
-        if (!reward) {
-            return null
-        }
-
-        return this.takeDamage(
-            reward.damage
+        return this.punishPlayer(
+            difficulty
         )
     },
 
@@ -259,8 +300,7 @@ const gameService = {
 
         return {
             success: true,
-            habit:
-                result.habit,
+            habit: result.habit,
             player
         }
     },
@@ -290,22 +330,9 @@ const gameService = {
             return result
         }
 
-        const reward =
-            this.getDifficulty(
-                habit.difficulty
-            )
-
-        if (!reward) {
-            return {
-                success: false,
-                reason:
-                    "difficulty-not-found"
-            }
-        }
-
         const player =
-            this.takeDamage(
-                reward.damage
+            this.punishPlayer(
+                habit.difficulty
             )
 
         return {
@@ -352,8 +379,7 @@ const gameService = {
 
         return {
             success: true,
-            daily:
-                result.daily,
+            daily: result.daily,
             player
         }
     }

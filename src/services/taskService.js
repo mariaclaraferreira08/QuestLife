@@ -8,7 +8,11 @@ const taskService = {
     },
 
     getTaskById(taskId) {
-        return this.getTasks().find(task => task.id === taskId)
+        return this
+            .getTasks()
+            .find(
+                task => task.id === taskId
+            )
     },
 
     addTask(task) {
@@ -16,101 +20,229 @@ const taskService = {
 
         const newTask = {
             ...task,
+
             id: crypto.randomUUID(),
+
             completed: false,
             failed: false,
-            subtasks: []
+
+            subtasks:
+                task.subtasks || []
         }
 
         tasks.push(newTask)
 
-        storageService.save(TASKS_KEY, tasks)
+        storageService.save(
+            TASKS_KEY,
+            tasks
+        )
 
         return newTask
     },
 
-    updateTask(taskId, updatedData) {
-        const tasks = this.getTasks()
+    updateTask(
+        taskId,
+        updatedData
+    ) {
+        const tasks =
+            this.getTasks()
 
-        const updatedTasks = tasks.map(task =>
-            task.id === taskId
-                ? { ...task, ...updatedData }
-                : task
+        const updatedTasks =
+            tasks.map(task => {
+                if (task.id === taskId) {
+                    return {
+                        ...task,
+                        ...updatedData
+                    }
+                }
+
+                return task
+            })
+
+        storageService.save(
+            TASKS_KEY,
+            updatedTasks
         )
 
-        storageService.save(TASKS_KEY, updatedTasks)
-
-        return this.getTaskById(taskId)
+        return updatedTasks.find(
+            task => task.id === taskId
+        )
     },
 
     completeTask(taskId) {
-        return this.updateTask(taskId, {
-            completed: true
-        })
+        return this.updateTask(
+            taskId,
+            {
+                completed: true,
+                failed: false
+            }
+        )
     },
 
     failTask(taskId) {
-        return this.updateTask(taskId, {
-            failed: true
-        })
-    },
-
-    removeTask(taskId) {
-        const tasks = this.getTasks()
-
-        const updatedTasks = tasks.filter(
-            task => task.id !== taskId
-        )
-
-        storageService.save(TASKS_KEY, updatedTasks)
-
-        return updatedTasks
-    },
-
-    addSubtask(taskId, title) {
-        const task = this.getTaskById(taskId)
+        const task =
+            this.getTaskById(taskId)
 
         if (!task) {
             return null
         }
 
-      const newSubtask = {
-        id: crypto.randomUUID(),
-        title: title,
-        completed: false
-}
+        /*
+         * Ao falhar, as subtarefas são
+         * desmarcadas.
+         */
+        const resetSubtasks =
+            (task.subtasks || []).map(
+                subtask => ({
+                    ...subtask,
+                    completed: false
+                })
+            )
+
+        return this.updateTask(
+            taskId,
+            {
+                failed: true,
+                completed: false,
+                subtasks: resetSubtasks
+            }
+        )
+    },
+
+    removeTask(taskId) {
+        const tasks =
+            this.getTasks()
+
+        const updatedTasks =
+            tasks.filter(
+                task =>
+                    task.id !== taskId
+            )
+
+        storageService.save(
+            TASKS_KEY,
+            updatedTasks
+        )
+
+        return updatedTasks
+    },
+
+    addSubtask(
+        taskId,
+        title
+    ) {
+        const task =
+            this.getTaskById(taskId)
+
+        if (!task) {
+            return null
+        }
+
+        /*
+         * Não deixa adicionar subtarefa
+         * em missão finalizada.
+         */
+        if (
+            task.completed ||
+            task.failed
+        ) {
+            return null
+        }
+
+        const newSubtask = {
+            id: crypto.randomUUID(),
+            title,
+            completed: false
+        }
 
         const subtasks = [
             ...(task.subtasks || []),
             newSubtask
         ]
 
-        return this.updateTask(taskId, {
-            subtasks: subtasks
-        })
+        return this.updateTask(
+            taskId,
+            {
+                subtasks
+            }
+        )
     },
 
-    toggleSubtask(taskId, subtaskId) {
-        const task = this.getTaskById(taskId)
+    toggleSubtask(
+        taskId,
+        subtaskId
+    ) {
+        const task =
+            this.getTaskById(taskId)
 
         if (!task) {
-            return null
+            return {
+                success: false,
+                reason: "task-not-found"
+            }
         }
 
-        const subtasks = (task.subtasks || []).map(subtask => {
-            if (subtask.id === subtaskId) {
-                return {
-                    ...subtask,
-                    completed: !subtask.completed
-                }
+        /*
+         * Missão concluída ou falhada
+         * não pode mais ser alterada.
+         */
+        if (
+            task.completed ||
+            task.failed
+        ) {
+            return {
+                success: false,
+                reason: "task-finished"
             }
+        }
 
-            return subtask
-        })
+        const subtasks =
+            (task.subtasks || []).map(
+                subtask => {
+                    if (
+                        subtask.id ===
+                        subtaskId
+                    ) {
+                        return {
+                            ...subtask,
 
-        return this.updateTask(taskId, {
-            subtasks: subtasks
-        })
+                            completed:
+                                !subtask.completed
+                        }
+                    }
+
+                    return subtask
+                }
+            )
+
+        /*
+         * Salva primeiro o novo estado
+         * das subtarefas.
+         */
+        const updatedTask =
+            this.updateTask(
+                taskId,
+                {
+                    subtasks
+                }
+            )
+
+        /*
+         * Verifica se existem subtarefas
+         * e se TODAS foram concluídas.
+         */
+        const allCompleted =
+            subtasks.length > 0 &&
+            subtasks.every(
+                subtask =>
+                    subtask.completed
+            )
+
+        return {
+            success: true,
+            task: updatedTask,
+            allCompleted
+        }
     }
 }
 

@@ -15,28 +15,67 @@ const emit = defineEmits([
 ])
 
 function addSubtask(taskId) {
-    const title = prompt("Digite o nome da subtarefa:")
+    const title =
+        prompt(
+            "Digite o nome da subtarefa:"
+        )
 
-    if (!title || !title.trim()) {
+    if (
+        !title ||
+        !title.trim()
+    ) {
         return
     }
 
-    emit("add-subtask", taskId, title.trim())
+    emit(
+        "add-subtask",
+        taskId,
+        title.trim()
+    )
+}
+
+function toggleSubtask(
+    task,
+    subtaskId
+) {
+    /*
+     * Depois que a missão termina,
+     * suas etapas ficam bloqueadas.
+     */
+    if (
+        task.completed ||
+        task.failed
+    ) {
+        return
+    }
+
+    emit(
+        "toggle-subtask",
+        task.id,
+        subtaskId
+    )
 }
 </script>
 
 <template>
     <div class="task-list">
+        <!-- ESTADO VAZIO -->
+
         <div
             v-if="tasks.length === 0"
             class="empty-state"
         >
-            <span class="empty-icon">⚔</span>
+            <span class="empty-icon">
+                ⚔
+            </span>
 
-            <h2>Nenhuma missão ativa</h2>
+            <h2>
+                Nenhuma missão ativa
+            </h2>
 
             <p>
-                Sua jornada está esperando por uma nova missão.
+                Sua jornada está esperando
+                por uma nova missão.
             </p>
 
             <RouterLink
@@ -47,15 +86,22 @@ function addSubtask(taskId) {
             </RouterLink>
         </div>
 
+        <!-- MISSÕES -->
+
         <article
             v-for="task in tasks"
             :key="task.id"
             class="quest-card"
             :class="{
-                completed: task.completed,
-                failed: task.failed
+                completed:
+                    task.completed,
+
+                failed:
+                    task.failed
             }"
         >
+            <!-- CABEÇALHO -->
+
             <div class="quest-header">
                 <div>
                     <div class="title-row">
@@ -65,45 +111,75 @@ function addSubtask(taskId) {
 
                         <span
                             class="difficulty"
-                            :class="task.difficulty"
+                            :class="
+                                task.difficulty
+                            "
                         >
-                            {{ task.difficulty }}
+                            {{
+                                task.difficulty
+                            }}
                         </span>
                     </div>
 
-                    <p v-if="task.description">
-                        {{ task.description }}
+                    <p
+                        v-if="
+                            task.description
+                        "
+                    >
+                        {{
+                            task.description
+                        }}
                     </p>
                 </div>
 
                 <button
+                    type="button"
                     class="delete-button"
                     title="Excluir missão"
-                    @click="emit('remove-task', task.id)"
+                    @click="
+                        emit(
+                            'remove-task',
+                            task.id
+                        )
+                    "
                 >
                     ×
                 </button>
             </div>
 
+            <!-- PRAZO -->
+
             <div
                 v-if="task.deadline"
                 class="deadline"
             >
-                ◷ PRAZO: {{ task.deadline }}
+                ◷ PRAZO:
+                {{ task.deadline }}
             </div>
 
+            <!-- SUBTAREFAS -->
+
             <div
-                v-if="task.subtasks?.length"
+                v-if="
+                    task.subtasks?.length
+                "
                 class="subtasks"
             >
                 <div
-                    v-for="subtask in task.subtasks"
+                    v-for="
+                        subtask
+                        in task.subtasks
+                    "
                     :key="subtask.id"
                     class="subtask"
+                    :class="{
+                        disabled:
+                            task.completed ||
+                            task.failed
+                    }"
                     @click="
-                        emit(
-                            'toggle-subtask',
-                            task.id,
+                        toggleSubtask(
+                            task,
                             subtask.id
                         )
                     "
@@ -111,15 +187,21 @@ function addSubtask(taskId) {
                     <span
                         class="checkbox"
                         :class="{
-                            checked: subtask.completed
+                            checked:
+                                subtask.completed
                         }"
                     >
-                        {{ subtask.completed ? "✓" : "" }}
+                        {{
+                            subtask.completed
+                                ? "✓"
+                                : ""
+                        }}
                     </span>
 
                     <span
                         :class="{
-                            crossed: subtask.completed
+                            crossed:
+                                subtask.completed
                         }"
                     >
                         {{ subtask.title }}
@@ -127,19 +209,35 @@ function addSubtask(taskId) {
                 </div>
             </div>
 
+            <!-- ADICIONAR ETAPA -->
+
             <button
-                v-if="!task.completed && !task.failed"
+                v-if="
+                    !task.completed &&
+                    !task.failed
+                "
+                type="button"
                 class="add-subtask"
-                @click="addSubtask(task.id)"
+                @click="
+                    addSubtask(
+                        task.id
+                    )
+                "
             >
                 + Adicionar etapa
             </button>
 
+            <!-- AÇÕES -->
+
             <div class="quest-actions">
                 <template
-                    v-if="!task.completed && !task.failed"
+                    v-if="
+                        !task.completed &&
+                        !task.failed
+                    "
                 >
                     <button
+                        type="button"
                         class="complete-button"
                         @click="
                             emit(
@@ -152,6 +250,7 @@ function addSubtask(taskId) {
                     </button>
 
                     <button
+                        type="button"
                         class="fail-button"
                         @click="
                             emit(
@@ -165,14 +264,18 @@ function addSubtask(taskId) {
                 </template>
 
                 <span
-                    v-else-if="task.completed"
+                    v-else-if="
+                        task.completed
+                    "
                     class="completed-label"
                 >
                     ✓ MISSÃO CONCLUÍDA
                 </span>
 
                 <span
-                    v-else-if="task.failed"
+                    v-else-if="
+                        task.failed
+                    "
                     class="failed-label"
                 >
                     ✕ MISSÃO FALHOU
@@ -186,14 +289,18 @@ function addSubtask(taskId) {
 .task-list {
     display: flex;
     flex-direction: column;
+
     gap: 16px;
 }
+
+/* ESTADO VAZIO */
 
 .empty-state {
     min-height: 400px;
 
     display: flex;
     flex-direction: column;
+
     align-items: center;
     justify-content: center;
 
@@ -201,7 +308,9 @@ function addSubtask(taskId) {
 
     background: #121c2d;
 
-    border: 1px dashed #3b4960;
+    border:
+        1px dashed #3b4960;
+
     border-radius: 12px;
 }
 
@@ -225,27 +334,35 @@ function addSubtask(taskId) {
     padding: 12px 18px;
 
     color: white;
+
     text-decoration: none;
 
-    background: linear-gradient(
-        90deg,
-        #7227dc,
-        #a928ef
-    );
+    background:
+        linear-gradient(
+            90deg,
+            #7227dc,
+            #a928ef
+        );
 
-    border: 1px solid #aa5cf2;
+    border:
+        1px solid #aa5cf2;
+
     border-radius: 7px;
 
     font-size: 12px;
     font-weight: bold;
 }
 
+/* CARD */
+
 .quest-card {
     padding: 20px;
 
     background: #151f30;
 
-    border: 1px solid #354158;
+    border:
+        1px solid #354158;
+
     border-radius: 11px;
 
     transition: 0.2s;
@@ -263,15 +380,20 @@ function addSubtask(taskId) {
     border-color: #7f3b4d;
 }
 
+/* CABEÇALHO */
+
 .quest-header {
     display: flex;
-    justify-content: space-between;
+
+    justify-content:
+        space-between;
 
     gap: 20px;
 }
 
 .title-row {
     display: flex;
+
     align-items: center;
     flex-wrap: wrap;
 
@@ -292,6 +414,8 @@ function addSubtask(taskId) {
     font-size: 13px;
 }
 
+/* DIFICULDADE */
+
 .difficulty {
     padding: 4px 8px;
 
@@ -300,7 +424,8 @@ function addSubtask(taskId) {
 
     font-size: 9px;
 
-    text-transform: uppercase;
+    text-transform:
+        uppercase;
 
     letter-spacing: 1px;
 }
@@ -325,13 +450,16 @@ function addSubtask(taskId) {
     color: #c982ff;
 }
 
+/* EXCLUIR */
+
 .delete-button {
     width: 30px;
     height: 30px;
 
     color: #758196;
 
-    background: transparent;
+    background:
+        transparent;
 
     border: none;
 
@@ -344,6 +472,8 @@ function addSubtask(taskId) {
     color: #ff617a;
 }
 
+/* PRAZO */
+
 .deadline {
     margin-top: 15px;
 
@@ -351,6 +481,8 @@ function addSubtask(taskId) {
 
     font-size: 11px;
 }
+
+/* SUBTAREFAS */
 
 .subtasks {
     display: flex;
@@ -363,6 +495,7 @@ function addSubtask(taskId) {
 
 .subtask {
     display: flex;
+
     align-items: center;
 
     gap: 10px;
@@ -372,19 +505,34 @@ function addSubtask(taskId) {
     font-size: 13px;
 
     cursor: pointer;
+
+    transition: 0.2s;
+}
+
+.subtask:hover:not(.disabled) {
+    color: #dce2ec;
+}
+
+.subtask.disabled {
+    cursor: default;
 }
 
 .checkbox {
     width: 18px;
     height: 18px;
 
+    flex-shrink: 0;
+
     display: flex;
+
     align-items: center;
     justify-content: center;
 
     color: #0d1421;
 
-    border: 1px solid #66748a;
+    border:
+        1px solid #66748a;
+
     border-radius: 4px;
 }
 
@@ -397,10 +545,13 @@ function addSubtask(taskId) {
 }
 
 .crossed {
-    text-decoration: line-through;
+    text-decoration:
+        line-through;
 
     opacity: 0.6;
 }
+
+/* ADICIONAR SUBTAREFA */
 
 .add-subtask {
     margin-top: 15px;
@@ -409,13 +560,18 @@ function addSubtask(taskId) {
 
     color: #ad79e8;
 
-    background: transparent;
+    background:
+        transparent;
 
-    border: 1px dashed #62428c;
+    border:
+        1px dashed #62428c;
+
     border-radius: 6px;
 
     cursor: pointer;
 }
+
+/* AÇÕES */
 
 .quest-actions {
     display: flex;
@@ -425,7 +581,8 @@ function addSubtask(taskId) {
     margin-top: 20px;
     padding-top: 15px;
 
-    border-top: 1px solid #29364a;
+    border-top:
+        1px solid #29364a;
 }
 
 .complete-button,
@@ -443,23 +600,38 @@ function addSubtask(taskId) {
 .complete-button {
     color: #5ce4b8;
 
-    background: rgba(42, 137, 109, 0.1);
+    background:
+        rgba(
+            42,
+            137,
+            109,
+            0.1
+        );
 
-    border: 1px solid #287e6b;
+    border:
+        1px solid #287e6b;
 }
 
 .fail-button {
     color: #ff7187;
 
-    background: rgba(160, 53, 76, 0.1);
+    background:
+        rgba(
+            160,
+            53,
+            76,
+            0.1
+        );
 
-    border: 1px solid #7f3b4d;
+    border:
+        1px solid #7f3b4d;
 }
 
 .completed-label {
     color: #48d8a9;
 
     font-size: 11px;
+
     letter-spacing: 1px;
 }
 
@@ -467,6 +639,7 @@ function addSubtask(taskId) {
     color: #ff7187;
 
     font-size: 11px;
+
     letter-spacing: 1px;
 }
 </style>
