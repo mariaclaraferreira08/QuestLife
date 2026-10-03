@@ -12,6 +12,7 @@ const props = defineProps({
 
 const emit = defineEmits([
     "complete",
+    "fail",
     "remove"
 ])
 
@@ -43,6 +44,43 @@ const difficultyName = computed(() => {
     )
 })
 
+function completeDaily() {
+    if (
+        !scheduledToday.value ||
+        completedToday.value
+    ) {
+        return
+    }
+
+    emit(
+        "complete",
+        props.daily.id
+    )
+}
+
+function failDaily() {
+    if (
+        !scheduledToday.value ||
+        completedToday.value
+    ) {
+        return
+    }
+
+    const confirmed =
+        window.confirm(
+            `Marcar a diária "${props.daily.title}" como não cumprida hoje?`
+        )
+
+    if (!confirmed) {
+        return
+    }
+
+    emit(
+        "fail",
+        props.daily.id
+    )
+}
+
 function removeDaily() {
     const confirmed =
         window.confirm(
@@ -64,8 +102,7 @@ function removeDaily() {
     <article
         class="daily-card"
         :class="{
-            completed:
-                completedToday
+            completed: completedToday
         }"
     >
         <button
@@ -75,12 +112,8 @@ function removeDaily() {
                 !scheduledToday ||
                 completedToday
             "
-            @click="
-                emit(
-                    'complete',
-                    daily.id
-                )
-            "
+            title="Concluir diária"
+            @click="completeDaily"
         >
             {{
                 completedToday
@@ -117,7 +150,11 @@ function removeDaily() {
                 <span>
                     🔥
                     {{ daily.streak || 0 }}
-                    dias
+                    {{
+                        (daily.streak || 0) === 1
+                            ? "dia"
+                            : "dias"
+                    }}
                 </span>
 
                 <span>
@@ -147,13 +184,29 @@ function removeDaily() {
             </div>
         </div>
 
-        <button
-            type="button"
-            class="delete"
-            @click="removeDaily"
-        >
-            ×
-        </button>
+        <div class="daily-actions">
+            <button
+                v-if="
+                    scheduledToday &&
+                    !completedToday
+                "
+                type="button"
+                class="fail"
+                title="Marcar como não cumprida"
+                @click="failDaily"
+            >
+                ✕ FALHEI
+            </button>
+
+            <button
+                type="button"
+                class="delete"
+                title="Excluir diária"
+                @click="removeDaily"
+            >
+                ×
+            </button>
+        </div>
     </article>
 </template>
 
@@ -176,6 +229,12 @@ function removeDaily() {
 
     border: 1px solid #354158;
     border-radius: 11px;
+
+    transition: 0.2s;
+}
+
+.daily-card:hover {
+    border-color: #604180;
 }
 
 .daily-card.completed {
@@ -186,6 +245,8 @@ function removeDaily() {
     width: 45px;
     height: 45px;
 
+    flex-shrink: 0;
+
     color: #09291f;
 
     background: #49d2a7;
@@ -193,9 +254,20 @@ function removeDaily() {
     border: 1px solid #62e6bd;
     border-radius: 8px;
 
+    font-family: inherit;
     font-size: 20px;
 
     cursor: pointer;
+
+    transition: 0.2s;
+}
+
+.check:hover:not(:disabled) {
+    transform: translateY(-1px);
+
+    box-shadow:
+        0 0 12px
+        rgba(73, 210, 167, 0.2);
 }
 
 .check:disabled {
@@ -242,6 +314,9 @@ function removeDaily() {
     border-radius: 20px;
 
     font-size: 9px;
+
+    text-transform: uppercase;
+    letter-spacing: 1px;
 }
 
 .difficulty.trivial {
@@ -280,13 +355,62 @@ function removeDaily() {
     color: #55d6ac;
 }
 
+.daily-actions {
+    display: flex;
+
+    align-items: center;
+
+    gap: 10px;
+}
+
+.fail {
+    padding: 8px 11px;
+
+    color: #ff7187;
+
+    background:
+        rgba(
+            160,
+            53,
+            76,
+            0.1
+        );
+
+    border: 1px solid #7f3b4d;
+    border-radius: 6px;
+
+    font-family: inherit;
+    font-size: 9px;
+    font-weight: bold;
+
+    cursor: pointer;
+
+    transition: 0.2s;
+}
+
+.fail:hover {
+    background:
+        rgba(
+            160,
+            53,
+            76,
+            0.2
+        );
+
+    border-color: #a94c62;
+}
+
 .delete {
+    width: 30px;
+    height: 30px;
+
     color: #667389;
 
     background: transparent;
 
     border: 0;
 
+    font-family: inherit;
     font-size: 21px;
 
     cursor: pointer;
@@ -296,16 +420,18 @@ function removeDaily() {
     color: #ff617a;
 }
 
-@media (max-width: 600px) {
+@media (max-width: 700px) {
     .daily-card {
         grid-template-columns:
             auto 1fr;
     }
 
-    .delete {
-        grid-column: 2;
+    .daily-actions {
+        grid-column:
+            1 / -1;
 
-        justify-self: end;
+        justify-content:
+            flex-end;
     }
 }
 </style>

@@ -1,10 +1,8 @@
 <script setup>
-import { computed } from "vue"
-
 const props = defineProps({
     modelValue: {
         type: Array,
-        required: true
+        default: () => []
     }
 })
 
@@ -12,137 +10,119 @@ const emit = defineEmits([
     "update:modelValue"
 ])
 
-const weekDays = [
+const weekdays = [
     {
-        id: "monday",
-        short: "S",
-        name: "Segunda"
+        value: "monday",
+        label: "SEG"
     },
     {
-        id: "tuesday",
-        short: "T",
-        name: "Terça"
+        value: "tuesday",
+        label: "TER"
     },
     {
-        id: "wednesday",
-        short: "Q",
-        name: "Quarta"
+        value: "wednesday",
+        label: "QUA"
     },
     {
-        id: "thursday",
-        short: "Q",
-        name: "Quinta"
+        value: "thursday",
+        label: "QUI"
     },
     {
-        id: "friday",
-        short: "S",
-        name: "Sexta"
+        value: "friday",
+        label: "SEX"
     },
     {
-        id: "saturday",
-        short: "S",
-        name: "Sábado"
+        value: "saturday",
+        label: "SÁB"
     },
     {
-        id: "sunday",
-        short: "D",
-        name: "Domingo"
+        value: "sunday",
+        label: "DOM"
     }
 ]
 
-function isSelected(dayId) {
-    return props.modelValue.includes(
-        dayId
-    )
+function isSelected(day) {
+    return props.modelValue.includes(day)
 }
 
-function toggleDay(dayId) {
-    if (isSelected(dayId)) {
-        emit(
-            "update:modelValue",
+function toggleDay(day) {
+    let updatedDays
 
+    if (isSelected(day)) {
+        updatedDays =
             props.modelValue.filter(
-                day =>
-                    day !== dayId
+                selectedDay =>
+                    selectedDay !== day
             )
-        )
-
-        return
+    } else {
+        updatedDays = [
+            ...props.modelValue,
+            day
+        ]
     }
 
     emit(
         "update:modelValue",
-
-        [
-            ...props.modelValue,
-            dayId
-        ]
+        updatedDays
     )
 }
-
-const selectedDayNames =
-    computed(() => {
-        return weekDays
-            .filter(day =>
-                props.modelValue.includes(
-                    day.id
-                )
-            )
-            .map(day => day.name)
-            .join(", ")
-    })
 </script>
 
 <template>
-    <section class="days-area">
-        <span class="days-title">
-            DIAS DA SEMANA
-        </span>
+    <section class="weekday-selector">
+        <div class="selector-header">
+            <span class="label">
+                DIAS DA SEMANA
+            </span>
 
-        <div class="week-days">
+            <p>
+                Escolha em quais dias esta diária
+                deve ser realizada.
+            </p>
+        </div>
+
+        <div class="weekdays">
             <button
-                v-for="day in weekDays"
-                :key="day.id"
+                v-for="day in weekdays"
+                :key="day.value"
                 type="button"
-                class="day-button"
+                class="weekday"
                 :class="{
-                    active:
-                        isSelected(day.id)
+                    selected:
+                        isSelected(day.value)
                 }"
-                :title="day.name"
-                :aria-label="day.name"
-                :aria-pressed="
-                    isSelected(day.id)
-                "
                 @click="
-                    toggleDay(day.id)
+                    toggleDay(day.value)
                 "
             >
-                {{ day.short }}
+                {{ day.label }}
             </button>
         </div>
 
         <p
-            v-if="modelValue.length"
-            class="days-description"
+            v-if="modelValue.length === 0"
+            class="warning"
         >
-            Repete em:
-            {{ selectedDayNames }}.
+            ○ Selecione pelo menos um dia.
         </p>
 
         <p
             v-else
-            class="days-warning"
+            class="selected-count"
         >
-            Escolha pelo menos um
-            dia da semana.
+            ✓
+            {{
+                modelValue.length === 1
+                    ? "1 dia selecionado"
+                    : `${modelValue.length} dias selecionados`
+            }}
         </p>
     </section>
 </template>
 
 <style scoped>
-.days-area {
-    padding: 16px;
+.weekday-selector {
+    padding: 18px;
 
     background: #101927;
 
@@ -150,18 +130,31 @@ const selectedDayNames =
     border-radius: 9px;
 }
 
-.days-title {
-    display: block;
-
-    margin-bottom: 13px;
-
-    color: #8996aa;
-
-    font-size: 9px;
-    letter-spacing: 1px;
+.selector-header {
+    margin-bottom: 17px;
 }
 
-.week-days {
+.label {
+    display: block;
+
+    margin-bottom: 8px;
+
+    color: #b16cff;
+
+    font-size: 10px;
+
+    letter-spacing: 2px;
+}
+
+.selector-header p {
+    margin: 0;
+
+    color: #7f8ca1;
+
+    font-size: 11px;
+}
+
+.weekdays {
     display: grid;
 
     grid-template-columns:
@@ -170,70 +163,88 @@ const selectedDayNames =
     gap: 9px;
 }
 
-.day-button {
-    width: 100%;
+.weekday {
+    min-height: 46px;
 
-    aspect-ratio: 1;
+    padding: 10px 6px;
 
-    max-height: 50px;
+    color: #9eabc0;
 
-    color: #79869a;
-
-    background: #0a1421;
+    background: #0e1725;
 
     border: 1px solid #354158;
-    border-radius: 50%;
+    border-radius: 7px;
 
     font-family: inherit;
+    font-size: 10px;
 
     cursor: pointer;
 
-    transition: 0.2s;
+    transition:
+        background 0.2s,
+        border-color 0.2s,
+        color 0.2s,
+        transform 0.2s;
 }
 
-.day-button:hover {
-    color: #d8c3ef;
+.weekday:hover {
+    color: #d6b4ff;
 
-    border-color: #9860c9;
+    border-color: #8851c7;
+
+    transform: translateY(-1px);
 }
 
-.day-button.active {
-    color: #20132e;
+.weekday.selected {
+    color: #ffffff;
 
-    background: #bd91ff;
+    background:
+        rgba(
+            139,
+            55,
+            255,
+            0.28
+        );
 
-    border-color: #d4b5ff;
+    border-color: #a65bea;
 
     box-shadow:
-        0 0 12px
+        inset 0 0 14px
         rgba(
-            189,
-            145,
+            155,
+            73,
             255,
-            0.15
+            0.08
         );
 }
 
-.days-description,
-.days-warning {
-    margin: 13px 0 0;
+.warning,
+.selected-count {
+    margin:
+        13px 0 0;
 
-    font-size: 10px;
-    line-height: 1.6;
+    font-size: 9px;
 }
 
-.days-description {
-    color: #8e9bad;
+.warning {
+    color: #8a97aa;
 }
 
-.days-warning {
-    color: #ee7184;
+.selected-count {
+    color: #52d7ab;
 }
 
-@media (max-width: 550px) {
-    .week-days {
+@media (max-width: 750px) {
+    .weekdays {
         grid-template-columns:
             repeat(4, 1fr);
+    }
+}
+
+@media (max-width: 450px) {
+    .weekdays {
+        grid-template-columns:
+            repeat(2, 1fr);
     }
 }
 </style>

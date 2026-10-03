@@ -1,205 +1,114 @@
 <script setup>
-import {
-    ref,
-    computed
-} from "vue"
+import { reactive, computed } from "vue"
 
-import DailyDifficultySelector
-    from "./form/DailyDifficultySelector.vue"
-
-import DailyDateSelector
-    from "./form/DailyDateSelector.vue"
-
-import DailyRepeatSelector
-    from "./form/DailyRepeatSelector.vue"
-
-import DailyWeekdaySelector
-    from "./form/DailyWeekdaySelector.vue"
+import DailyDifficultySelector from "./form/DailyDifficultySelector.vue"
+import DailyDateSelector from "./form/DailyDateSelector.vue"
+import DailyRepeatSelector from "./form/DailyRepeatSelector.vue"
+import DailyWeekdaySelector from "./form/DailyWeekdaySelector.vue"
 
 const emit = defineEmits([
     "create",
     "cancel"
 ])
 
-/*
- * FORMULÁRIO
- */
+function getToday() {
+    const today = new Date()
 
-const title = ref("")
-const notes = ref("")
-
-const difficulty = ref("easy")
-
-const repeatEvery = ref(1)
-
-/*
- * DATA
- */
-
-function getLocalDateString(
-    date = new Date()
-) {
     const year =
-        date.getFullYear()
+        today.getFullYear()
 
     const month =
         String(
-            date.getMonth() + 1
-        ).padStart(
-            2,
-            "0"
-        )
+            today.getMonth() + 1
+        ).padStart(2, "0")
 
     const day =
         String(
-            date.getDate()
-        ).padStart(
-            2,
-            "0"
-        )
+            today.getDate()
+        ).padStart(2, "0")
 
     return `${year}-${month}-${day}`
 }
 
-const today =
-    getLocalDateString()
+const form = reactive({
+    title: "",
+    description: "",
 
-const startDate =
-    ref(today)
+    difficulty: "easy",
 
-/*
- * DIAS
- */
+    startDate: getToday(),
 
-const selectedDays =
-    ref([
-        "monday",
-        "tuesday",
-        "wednesday",
-        "thursday",
-        "friday",
-        "saturday",
-        "sunday"
-    ])
+    repeatType: "weekly",
+    repeatEvery: 1,
 
-const weekDays = [
-    {
-        id: "monday",
-        name: "Segunda"
-    },
-    {
-        id: "tuesday",
-        name: "Terça"
-    },
-    {
-        id: "wednesday",
-        name: "Quarta"
-    },
-    {
-        id: "thursday",
-        name: "Quinta"
-    },
-    {
-        id: "friday",
-        name: "Sexta"
-    },
-    {
-        id: "saturday",
-        name: "Sábado"
-    },
-    {
-        id: "sunday",
-        name: "Domingo"
+    daysOfWeek: []
+})
+
+const canCreate = computed(() => {
+    return (
+        form.title.trim().length > 0 &&
+        form.daysOfWeek.length > 0
+    )
+})
+
+const selectedDaysText = computed(() => {
+    const names = {
+        monday: "Seg",
+        tuesday: "Ter",
+        wednesday: "Qua",
+        thursday: "Qui",
+        friday: "Sex",
+        saturday: "Sáb",
+        sunday: "Dom"
     }
-]
 
-/*
- * RESUMO
- */
+    if (
+        form.daysOfWeek.length === 0
+    ) {
+        return "Nenhum dia selecionado"
+    }
 
-const selectedDayNames =
-    computed(() => {
-        return weekDays
-            .filter(day =>
-                selectedDays.value.includes(
-                    day.id
-                )
-            )
-            .map(day => day.name)
-            .join(", ")
-    })
-
-const repeatText =
-    computed(() => {
-        if (
-            repeatEvery.value === 1
-        ) {
-            return "Toda semana"
-        }
-
-        return (
-            `A cada ` +
-            `${repeatEvery.value} semanas`
-        )
-    })
-
-/*
- * VALIDAÇÃO
- */
-
-const canCreate =
-    computed(() => {
-        return (
-            title.value
-                .trim()
-                .length > 0 &&
-
-            Boolean(
-                startDate.value
-            ) &&
-
-            selectedDays.value
-                .length > 0
-        )
-    })
-
-/*
- * CRIAR
- */
+    return form.daysOfWeek
+        .map(day => names[day])
+        .join(", ")
+})
 
 function createDaily() {
     if (!canCreate.value) {
         return
     }
 
-    const dailyData = {
-        title:
-            title.value.trim(),
-
-        description:
-            notes.value.trim(),
-
-        difficulty:
-            difficulty.value,
-
-        startDate:
-            startDate.value,
-
-        repeatEvery:
-            repeatEvery.value,
-
-        daysOfWeek: [
-            ...selectedDays.value
-        ]
-    }
-
     emit(
         "create",
-        dailyData
+        {
+            title:
+                form.title.trim(),
+
+            description:
+                form.description.trim(),
+
+            difficulty:
+                form.difficulty,
+
+            startDate:
+                form.startDate,
+
+            repeatType:
+                form.repeatType,
+
+            repeatEvery:
+                Number(
+                    form.repeatEvery
+                ) || 1,
+
+            daysOfWeek: [
+                ...form.daysOfWeek
+            ]
+        }
     )
 }
 
-function cancelForm() {
+function cancel() {
     emit("cancel")
 }
 </script>
@@ -212,66 +121,64 @@ function cancelForm() {
         <!-- CABEÇALHO -->
 
         <header class="form-header">
-            <span class="eyebrow">
-                NEW DAILY
-            </span>
+            <div>
+                <span class="eyebrow">
+                    NEW DAILY QUEST
+                </span>
 
-            <h1>
-                Criar diária
-            </h1>
+                <h2>
+                    Criar diária
+                </h2>
 
-            <p>
-                Crie uma missão recorrente
-                para determinados dias da
-                semana.
-            </p>
+                <p>
+                    Crie uma missão recorrente
+                    para determinados dias da semana.
+                </p>
+            </div>
         </header>
 
         <!-- TÍTULO -->
 
-        <section class="form-section">
-            <label
-                class="section-label"
-                for="daily-title"
-            >
+        <div class="field">
+            <label for="daily-title">
                 TÍTULO
             </label>
 
             <input
                 id="daily-title"
-                v-model="title"
-                class="text-input"
+                v-model="form.title"
                 type="text"
                 placeholder="Ex: Estudar SQL"
                 maxlength="80"
-                autocomplete="off"
             />
-        </section>
+        </div>
 
-        <!-- ANOTAÇÕES -->
+        <!-- DESCRIÇÃO -->
 
-        <section class="form-section">
-            <label
-                class="section-label"
-                for="daily-notes"
-            >
+        <div class="field">
+            <label for="daily-description">
                 ANOTAÇÕES
             </label>
 
             <textarea
-                id="daily-notes"
-                v-model="notes"
-                class="notes-input"
+                id="daily-description"
+                v-model="form.description"
                 placeholder="Ex: Revisar durante 30 minutos"
-                maxlength="300"
+                rows="4"
             ></textarea>
-        </section>
+        </div>
 
         <!-- DIFICULDADE -->
 
-        <DailyDifficultySelector
-            v-model="difficulty"
-        />
+        <section class="form-section">
+            <span class="section-label">
+                DIFICULDADE
+            </span>
+
+            <DailyDifficultySelector
+                v-model="form.difficulty"
+            />
+        </section>
 
         <!-- AGENDAMENTO -->
 
@@ -280,17 +187,27 @@ function cancelForm() {
                 AGENDAMENTO
             </span>
 
+            <!-- DATA -->
+
             <DailyDateSelector
-                v-model="startDate"
-                :min="today"
+                v-model="form.startDate"
             />
+
+            <!-- REPETIÇÃO -->
 
             <DailyRepeatSelector
-                v-model="repeatEvery"
+                v-model:repeat-type="
+                    form.repeatType
+                "
+                v-model:repeat-every="
+                    form.repeatEvery
+                "
             />
 
+            <!-- DIAS DA SEMANA -->
+
             <DailyWeekdaySelector
-                v-model="selectedDays"
+                v-model="form.daysOfWeek"
             />
         </section>
 
@@ -303,27 +220,25 @@ function cancelForm() {
 
             <strong>
                 {{
-                    title.trim() ||
+                    form.title.trim() ||
                     "Nova diária"
                 }}
             </strong>
 
-            <p>
-                {{ repeatText }}
-            </p>
+            <span>
+                {{ selectedDaysText }}
+            </span>
 
-            <p
-                v-if="
-                    selectedDays.length
-                "
-            >
-                {{ selectedDayNames }}
-            </p>
-
-            <p>
-                Início:
-                {{ startDate }}
-            </p>
+            <span>
+                Repetição:
+                a cada
+                {{ form.repeatEvery }}
+                {{
+                    form.repeatEvery === 1
+                        ? "semana"
+                        : "semanas"
+                }}
+            </span>
         </section>
 
         <!-- AÇÕES -->
@@ -332,7 +247,7 @@ function cancelForm() {
             <button
                 type="button"
                 class="cancel-button"
-                @click="cancelForm"
+                @click="cancel"
             >
                 CANCELAR
             </button>
@@ -350,46 +265,117 @@ function cancelForm() {
 
 <style scoped>
 .daily-form {
-    width: 100%;
-
     display: flex;
     flex-direction: column;
 
-    gap: 28px;
+    gap: 27px;
+
+    padding: 22px;
+
+    color: #eef1f7;
+
+    background: #151f30;
+
+    border: 1px solid #354158;
+    border-radius: 12px;
 }
 
-/* CABEÇALHO */
+/* HEADER */
 
 .form-header {
-    padding-bottom: 6px;
+    padding-bottom: 20px;
+
+    border-bottom:
+        1px solid #29364a;
 }
 
 .eyebrow {
-    display: block;
-
-    margin-bottom: 8px;
-
-    color: #ae63ef;
+    color: #ad6df1;
 
     font-size: 10px;
+
     letter-spacing: 2px;
 }
 
-.form-header h1 {
-    margin: 0;
+.form-header h2 {
+    margin: 6px 0;
 
-    color: #f1f3f8;
-
-    font-size: 31px;
-    font-weight: 400;
+    font-size: 26px;
 }
 
 .form-header p {
-    margin: 10px 0 0;
+    margin: 0;
 
-    color: #8491a5;
+    color: #8190a6;
 
     font-size: 12px;
+}
+
+/* CAMPOS */
+
+.field {
+    display: flex;
+    flex-direction: column;
+
+    gap: 10px;
+}
+
+.field label,
+.section-label {
+    color: #b16cff;
+
+    font-size: 10px;
+
+    letter-spacing: 2px;
+}
+
+.field input,
+.field textarea {
+    width: 100%;
+
+    box-sizing: border-box;
+
+    padding: 15px;
+
+    color: #eef1f7;
+
+    background: #101927;
+
+    border: 1px solid #354158;
+    border-radius: 7px;
+
+    outline: none;
+
+    font-family: inherit;
+}
+
+.field input {
+    min-height: 55px;
+}
+
+.field textarea {
+    min-height: 100px;
+
+    resize: vertical;
+}
+
+.field input:focus,
+.field textarea:focus {
+    border-color: #9851df;
+
+    box-shadow:
+        0 0 0 2px
+        rgba(
+            152,
+            81,
+            223,
+            0.08
+        );
+}
+
+.field input::placeholder,
+.field textarea::placeholder {
+    color: #65738a;
 }
 
 /* SEÇÕES */
@@ -398,150 +384,78 @@ function cancelForm() {
     display: flex;
     flex-direction: column;
 
-    gap: 12px;
-}
-
-.section-label {
-    color: #b15cf0;
-
-    font-size: 10px;
-    letter-spacing: 2px;
-}
-
-/* INPUTS */
-
-.text-input,
-.notes-input {
-    width: 100%;
-
-    box-sizing: border-box;
-
-    color: #edf0f7;
-
-    background: #0d1725;
-
-    border: 1px solid #354158;
-    border-radius: 7px;
-
-    font-family: inherit;
-
-    transition: 0.2s;
-}
-
-.text-input {
-    height: 57px;
-
-    padding: 0 16px;
-}
-
-.notes-input {
-    min-height: 100px;
-
-    padding: 16px;
-
-    resize: vertical;
-}
-
-.text-input::placeholder,
-.notes-input::placeholder {
-    color: #627087;
-}
-
-.text-input:focus,
-.notes-input:focus {
-    outline: none;
-
-    border-color: #9950d7;
-
-    box-shadow:
-        0 0 0 2px
-        rgba(
-            153,
-            80,
-            215,
-            0.08
-        );
+    gap: 14px;
 }
 
 /* RESUMO */
 
 .summary {
-    padding: 16px;
-
     display: flex;
     flex-direction: column;
 
-    gap: 7px;
+    gap: 8px;
+
+    padding: 16px;
 
     background: #101927;
 
     border: 1px solid #354158;
-    border-radius: 9px;
+    border-radius: 8px;
 }
 
 .summary-label {
-    color: #a960dd;
+    color: #b16cff;
 
     font-size: 9px;
-    letter-spacing: 1px;
+
+    letter-spacing: 2px;
 }
 
 .summary strong {
-    color: #edf0f7;
+    color: #eef1f7;
 
     font-size: 13px;
 }
 
-.summary p {
-    margin: 0;
-
-    color: #8390a4;
+.summary > span:not(
+    .summary-label
+) {
+    color: #8190a6;
 
     font-size: 10px;
 }
 
-/* AÇÕES */
+/* BOTÕES */
 
 .form-actions {
     display: flex;
 
     justify-content: flex-end;
 
-    gap: 10px;
+    gap: 12px;
 
     padding-top: 5px;
 }
 
 .cancel-button,
 .create-button {
-    min-height: 42px;
-
-    padding: 10px 18px;
+    padding: 12px 17px;
 
     border-radius: 7px;
 
     font-family: inherit;
-
     font-size: 10px;
     font-weight: bold;
 
     cursor: pointer;
-
-    transition: 0.2s;
 }
 
 .cancel-button {
-    color: #bdc5d3;
+    color: #a8b2c3;
 
-    background: #101927;
+    background: transparent;
 
-    border: 1px solid #3b475a;
-}
-
-.cancel-button:hover {
-    color: white;
-
-    border-color: #68758b;
+    border: 1px solid #455168;
 }
 
 .create-button {
@@ -550,33 +464,28 @@ function cancelForm() {
     background:
         linear-gradient(
             90deg,
-            #7b2cd3,
-            #a82ce8
+            #7227dc,
+            #a928ef
         );
 
-    border: 1px solid #b05eea;
-}
-
-.create-button:hover:not(:disabled) {
-    transform: translateY(-1px);
+    border: 1px solid #aa5cf2;
 }
 
 .create-button:disabled {
-    color: #687487;
-
-    background: #27213b;
-
-    border-color: #49365e;
-
-    opacity: 0.6;
+    opacity: 0.4;
 
     cursor: not-allowed;
 }
 
-@media (max-width: 550px) {
+/* RESPONSIVO */
+
+@media (max-width: 700px) {
+    .daily-form {
+        padding: 16px;
+    }
+
     .form-actions {
-        flex-direction:
-            column-reverse;
+        flex-direction: column;
     }
 
     .cancel-button,
