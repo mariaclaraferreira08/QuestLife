@@ -382,6 +382,40 @@ const gameService = {
             daily: result.daily,
             player
         }
+    },
+
+    failDailyById(dailyId) {
+        const daily =
+            dailyService.getDailyById(
+                dailyId
+            )
+
+        if (!daily) {
+            return {
+                success: false,
+                reason: "daily-not-found"
+            }
+        }
+
+        const result =
+            dailyService.failDaily(
+                dailyId
+            )
+
+        if (!result.success) {
+            return result
+        }
+
+        const player =
+            this.punishPlayer(
+                daily.difficulty
+            )
+
+        return {
+            success: true,
+            daily: result.daily,
+            player
+        }
     }
 }
 

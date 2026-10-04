@@ -66,6 +66,55 @@ function completeDaily(dailyId) {
 
         if (
             result.reason ===
+            "already-failed-today"
+        ) {
+            alert(
+                "Esta diária já foi marcada como falha hoje."
+            )
+        }
+
+        if (
+            result.reason ===
+            "not-scheduled-today"
+        ) {
+            alert(
+                "Esta diária não está programada para hoje."
+            )
+        }
+
+        return
+    }
+
+    refreshDailies()
+}
+
+function failDaily(dailyId) {
+    const result =
+        gameService.failDailyById(
+            dailyId
+        )
+
+    if (!result.success) {
+        if (
+            result.reason ===
+            "already-completed-today"
+        ) {
+            alert(
+                "Você já concluiu esta diária hoje."
+            )
+        }
+
+        if (
+            result.reason ===
+            "already-failed-today"
+        ) {
+            alert(
+                "Você já marcou esta diária como falha hoje."
+            )
+        }
+
+        if (
+            result.reason ===
             "not-scheduled-today"
         ) {
             alert(
@@ -96,9 +145,13 @@ onMounted(
     <section class="dailies-page">
         <header class="page-header">
             <div>
-                <span>DAILY QUESTS</span>
+                <span>
+                    DAILY QUESTS
+                </span>
 
-                <h1>Diárias</h1>
+                <h1>
+                    Diárias
+                </h1>
 
                 <p>
                     Missões recorrentes que
@@ -133,7 +186,9 @@ onMounted(
                 "
                 class="empty"
             >
-                <span>📅</span>
+                <span>
+                    📅
+                </span>
 
                 <h2>
                     Nenhuma diária criada
@@ -155,19 +210,27 @@ onMounted(
             </section>
 
             <template v-else>
+                <!-- DIÁRIAS DE HOJE -->
+
                 <section
                     class="daily-section"
                 >
                     <div
                         class="section-title"
                     >
-                        <span>HOJE</span>
+                        <span>
+                            HOJE
+                        </span>
 
                         <strong>
                             {{
                                 todayDailies.length
                             }}
-                            MISSÕES
+                            {{
+                                todayDailies.length === 1
+                                    ? "MISSÃO"
+                                    : "MISSÕES"
+                            }}
                         </strong>
                     </div>
 
@@ -191,6 +254,9 @@ onMounted(
                             @complete="
                                 completeDaily
                             "
+                            @fail="
+                                failDaily
+                            "
                             @remove="
                                 removeDaily
                             "
@@ -206,6 +272,8 @@ onMounted(
                     </div>
                 </section>
 
+                <!-- OUTRAS DIÁRIAS -->
+
                 <section
                     v-if="
                         otherDailies.length
@@ -218,6 +286,17 @@ onMounted(
                         <span>
                             OUTRAS DIÁRIAS
                         </span>
+
+                        <strong>
+                            {{
+                                otherDailies.length
+                            }}
+                            {{
+                                otherDailies.length === 1
+                                    ? "MISSÃO"
+                                    : "MISSÕES"
+                            }}
+                        </strong>
                     </div>
 
                     <div
@@ -236,6 +315,9 @@ onMounted(
                             "
                             @complete="
                                 completeDaily
+                            "
+                            @fail="
+                                failDaily
                             "
                             @remove="
                                 removeDaily
@@ -277,6 +359,7 @@ onMounted(
     color: #ad6df1;
 
     font-size: 10px;
+
     letter-spacing: 2px;
 }
 
@@ -298,7 +381,12 @@ onMounted(
 
     color: white;
 
-    background: #982dea;
+    background:
+        linear-gradient(
+            90deg,
+            #7227dc,
+            #a928ef
+        );
 
     border: 1px solid #b05bf0;
     border-radius: 7px;
@@ -307,6 +395,11 @@ onMounted(
     font-weight: bold;
 
     cursor: pointer;
+}
+
+.new-button:hover,
+.empty button:hover {
+    filter: brightness(1.08);
 }
 
 .daily-section {
@@ -323,6 +416,7 @@ onMounted(
     color: #8996a9;
 
     font-size: 10px;
+
     letter-spacing: 1px;
 }
 
@@ -387,6 +481,10 @@ onMounted(
         align-items: stretch;
 
         flex-direction: column;
+    }
+
+    .new-button {
+        width: 100%;
     }
 }
 </style>

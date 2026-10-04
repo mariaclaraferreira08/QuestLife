@@ -1,3 +1,14 @@
+/* =========================================
+   QUESTLIFE — ESTILOS GLOBAIS
+   ========================================= */
+
+@import url("https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800&display=swap");
+
+
+/* =========================================
+   RESET
+   ========================================= */
+
 * {
     box-sizing: border-box;
 }
@@ -9,40 +20,135 @@ body,
     margin: 0;
 }
 
+html {
+    font-size: 16px;
+}
+
 body {
     min-width: 320px;
 
-    background: #0d1421;
+    margin: 0;
+
     color: #e8ecf5;
+    background: #0d1421;
 
     font-family:
-        "Courier New",
-        Courier,
-        monospace;
+        "Nunito",
+        sans-serif;
+
+    font-size: 16px;
+    font-weight: 500;
+    line-height: 1.5;
+
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
 }
+
+
+/* =========================================
+   TIPOGRAFIA
+   ========================================= */
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+    margin-top: 0;
+
+    color: #f3f5fa;
+
+    font-family:
+        "Fredoka",
+        sans-serif;
+
+    font-weight: 600;
+
+    line-height: 1.2;
+}
+
+h1 {
+    font-size: clamp(
+        2rem,
+        4vw,
+        2.6rem
+    );
+}
+
+h2 {
+    font-size: 1.6rem;
+}
+
+h3 {
+    font-size: 1.25rem;
+}
+
+p {
+    line-height: 1.6;
+}
+
+
+/* =========================================
+   FORMULÁRIOS
+   ========================================= */
 
 button,
 input,
 textarea,
 select {
-    font: inherit;
+    font-family:
+        "Nunito",
+        sans-serif;
 }
 
-button,
-a {
-    transition: 0.2s ease;
+input,
+textarea,
+select {
+    font-size: 1rem;
+    font-weight: 500;
 }
 
 button {
+    font-size: 0.9rem;
+    font-weight: 800;
+
     cursor: pointer;
 }
 
-::selection {
-    background: #8c2cff;
-    color: white;
+
+/* =========================================
+   LINKS E BOTÕES
+   ========================================= */
+
+button,
+a {
+    transition:
+        background-color 0.2s ease,
+        border-color 0.2s ease,
+        color 0.2s ease,
+        transform 0.2s ease,
+        box-shadow 0.2s ease;
 }
 
-/* Scrollbar */
+a {
+    color: inherit;
+}
+
+
+/* =========================================
+   SELEÇÃO DE TEXTO
+   ========================================= */
+
+::selection {
+    color: white;
+    background: #8c2cff;
+}
+
+
+/* =========================================
+   SCROLLBAR
+   ========================================= */
 
 ::-webkit-scrollbar {
     width: 8px;
@@ -54,9 +160,100 @@ button {
 
 ::-webkit-scrollbar-thumb {
     background: #354158;
+
     border-radius: 10px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
     background: #8141c9;
+}
+
+
+/* =========================================
+   CLASSES GLOBAIS DO QUESTLIFE
+   ========================================= */
+
+/*
+ * Pequenos títulos como:
+ *
+ * QUEST LOG
+ * DAILY QUESTS
+ * DIFICULDADE
+ * AGENDAMENTO
+ */
+.eyebrow,
+.section-label {
+    color: #b16cff;
+
+    font-size: 0.72rem;
+    font-weight: 800;
+
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+}
+
+
+/*
+ * Botões principais.
+ */
+.primary-button {
+    padding: 12px 18px;
+
+    color: white;
+    background:
+        linear-gradient(
+            135deg,
+            #7c2ae8,
+            #a82bef
+        );
+
+    border: 1px solid #b15cf0;
+    border-radius: 9px;
+
+    font-weight: 800;
+
+    box-shadow:
+        0 4px 14px
+        rgba(140, 44, 255, 0.16);
+}
+
+.primary-button:hover {
+    transform: translateY(-1px);
+
+    box-shadow:
+        0 6px 18px
+        rgba(140, 44, 255, 0.24);
+}
+
+
+/*
+ * Textos secundários.
+ */
+.muted-text {
+    color: #8793a7;
+}
+
+
+/* =========================================
+   ACESSIBILIDADE
+   ========================================= */
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+    outline: 2px solid #a855f7;
+    outline-offset: 3px;
+}
+
+
+/* =========================================
+   RESPONSIVIDADE
+   ========================================= */
+
+@media (max-width: 700px) {
+    html {
+        font-size: 15px;
+    }
 }

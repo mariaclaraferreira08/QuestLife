@@ -1,9 +1,11 @@
 <script setup>
-import { reactive, computed } from "vue"
+import {
+    reactive,
+    computed
+} from "vue"
 
 import DailyDifficultySelector from "./form/DailyDifficultySelector.vue"
 import DailyDateSelector from "./form/DailyDateSelector.vue"
-import DailyRepeatSelector from "./form/DailyRepeatSelector.vue"
 import DailyWeekdaySelector from "./form/DailyWeekdaySelector.vue"
 
 const emit = defineEmits([
@@ -38,6 +40,10 @@ const form = reactive({
 
     startDate: getToday(),
 
+    /*
+     * Por enquanto nossas diárias
+     * trabalham com recorrência semanal.
+     */
     repeatType: "weekly",
     repeatEvery: 1,
 
@@ -47,6 +53,7 @@ const form = reactive({
 const canCreate = computed(() => {
     return (
         form.title.trim().length > 0 &&
+        form.startDate &&
         form.daysOfWeek.length > 0
     )
 })
@@ -72,6 +79,33 @@ const selectedDaysText = computed(() => {
         .map(day => names[day])
         .join(", ")
 })
+
+const difficultyText = computed(() => {
+    const names = {
+        trivial: "Trivial",
+        easy: "Fácil",
+        medium: "Médio",
+        hard: "Difícil",
+        legendary: "Lendário"
+    }
+
+    return (
+        names[form.difficulty] ||
+        "Fácil"
+    )
+})
+
+function decreaseInterval() {
+    if (form.repeatEvery <= 1) {
+        return
+    }
+
+    form.repeatEvery--
+}
+
+function increaseInterval() {
+    form.repeatEvery++
+}
 
 function createDaily() {
     if (!canCreate.value) {
@@ -121,20 +155,18 @@ function cancel() {
         <!-- CABEÇALHO -->
 
         <header class="form-header">
-            <div>
-                <span class="eyebrow">
-                    NEW DAILY QUEST
-                </span>
+            <span class="eyebrow">
+                NEW DAILY QUEST
+            </span>
 
-                <h2>
-                    Criar diária
-                </h2>
+            <h2>
+                Criar diária
+            </h2>
 
-                <p>
-                    Crie uma missão recorrente
-                    para determinados dias da semana.
-                </p>
-            </div>
+            <p>
+                Crie uma missão recorrente
+                para determinados dias da semana.
+            </p>
         </header>
 
         <!-- TÍTULO -->
@@ -150,10 +182,11 @@ function cancel() {
                 type="text"
                 placeholder="Ex: Estudar SQL"
                 maxlength="80"
+                autocomplete="off"
             />
         </div>
 
-        <!-- DESCRIÇÃO -->
+        <!-- ANOTAÇÕES -->
 
         <div class="field">
             <label for="daily-description">
@@ -164,47 +197,83 @@ function cancel() {
                 id="daily-description"
                 v-model="form.description"
                 placeholder="Ex: Revisar durante 30 minutos"
+                maxlength="300"
                 rows="4"
             ></textarea>
         </div>
 
         <!-- DIFICULDADE -->
 
-        <section class="form-section">
-            <span class="section-label">
-                DIFICULDADE
-            </span>
-
-            <DailyDifficultySelector
-                v-model="form.difficulty"
-            />
-        </section>
+        <DailyDifficultySelector
+            v-model="form.difficulty"
+        />
 
         <!-- AGENDAMENTO -->
 
-        <section class="form-section">
-            <span class="section-label">
-                AGENDAMENTO
-            </span>
+        <section class="schedule-section">
+            <header class="schedule-header">
+                <span class="section-label">
+                    AGENDAMENTO
+                </span>
 
-            <!-- DATA -->
+                <p>
+                    Defina quando esta diária
+                    fará parte da sua rotina.
+                </p>
+            </header>
 
-            <DailyDateSelector
-                v-model="form.startDate"
-            />
+            <div class="schedule-grid">
+                <!-- DATA -->
 
-            <!-- REPETIÇÃO -->
+                <DailyDateSelector
+                    v-model="form.startDate"
+                />
 
-            <DailyRepeatSelector
-                v-model:repeat-type="
-                    form.repeatType
-                "
-                v-model:repeat-every="
-                    form.repeatEvery
-                "
-            />
+                <!-- INTERVALO -->
 
-            <!-- DIAS DA SEMANA -->
+                <section class="interval-selector">
+                    <span class="control-label">
+                        REPETIR A CADA
+                    </span>
+
+                    <div class="interval-card">
+                        <button
+                            type="button"
+                            class="interval-button"
+                            :disabled="
+                                form.repeatEvery <= 1
+                            "
+                            @click="decreaseInterval"
+                        >
+                            −
+                        </button>
+
+                        <div class="interval-value">
+                            <strong>
+                                {{ form.repeatEvery }}
+                            </strong>
+
+                            <span>
+                                {{
+                                    form.repeatEvery === 1
+                                        ? "semana"
+                                        : "semanas"
+                                }}
+                            </span>
+                        </div>
+
+                        <button
+                            type="button"
+                            class="interval-button"
+                            @click="increaseInterval"
+                        >
+                            +
+                        </button>
+                    </div>
+                </section>
+            </div>
+
+            <!-- DIAS -->
 
             <DailyWeekdaySelector
                 v-model="form.daysOfWeek"
@@ -225,21 +294,36 @@ function cancel() {
                 }}
             </strong>
 
-            <span>
-                {{ selectedDaysText }}
-            </span>
+            <div class="summary-details">
+                <span>
+                    📅 {{ selectedDaysText }}
+                </span>
 
-            <span>
-                Repetição:
-                a cada
-                {{ form.repeatEvery }}
-                {{
-                    form.repeatEvery === 1
-                        ? "semana"
-                        : "semanas"
-                }}
-            </span>
+                <span>
+                    ↻ A cada
+                    {{ form.repeatEvery }}
+                    {{
+                        form.repeatEvery === 1
+                            ? "semana"
+                            : "semanas"
+                    }}
+                </span>
+
+                <span>
+                    ✦ {{ difficultyText }}
+                </span>
+            </div>
         </section>
+
+        <!-- VALIDAÇÃO -->
+
+        <p
+            v-if="!canCreate"
+            class="form-warning"
+        >
+            Informe um título e selecione
+            pelo menos um dia da semana.
+        </p>
 
         <!-- AÇÕES -->
 
@@ -265,12 +349,15 @@ function cancel() {
 
 <style scoped>
 .daily-form {
+    width: 100%;
+    box-sizing: border-box;
+
     display: flex;
     flex-direction: column;
 
-    gap: 27px;
+    gap: 28px;
 
-    padding: 22px;
+    padding: 24px;
 
     color: #eef1f7;
 
@@ -289,8 +376,11 @@ function cancel() {
         1px solid #29364a;
 }
 
-.eyebrow {
-    color: #ad6df1;
+.eyebrow,
+.section-label,
+.control-label,
+.summary-label {
+    color: #b16cff;
 
     font-size: 10px;
 
@@ -300,15 +390,18 @@ function cancel() {
 .form-header h2 {
     margin: 6px 0;
 
-    font-size: 26px;
+    font-size: 27px;
+    font-weight: 400;
 }
 
-.form-header p {
+.form-header p,
+.schedule-header p {
     margin: 0;
 
     color: #8190a6;
 
-    font-size: 12px;
+    font-size: 11px;
+    line-height: 1.6;
 }
 
 /* CAMPOS */
@@ -320,8 +413,7 @@ function cancel() {
     gap: 10px;
 }
 
-.field label,
-.section-label {
+.field label {
     color: #b16cff;
 
     font-size: 10px;
@@ -332,7 +424,6 @@ function cancel() {
 .field input,
 .field textarea {
     width: 100%;
-
     box-sizing: border-box;
 
     padding: 15px;
@@ -354,7 +445,7 @@ function cancel() {
 }
 
 .field textarea {
-    min-height: 100px;
+    min-height: 105px;
 
     resize: vertical;
 }
@@ -378,13 +469,123 @@ function cancel() {
     color: #65738a;
 }
 
-/* SEÇÕES */
+/* AGENDAMENTO */
 
-.form-section {
+.schedule-section {
     display: flex;
     flex-direction: column;
 
+    gap: 20px;
+}
+
+.schedule-header {
+    display: flex;
+    flex-direction: column;
+
+    gap: 6px;
+}
+
+.schedule-grid {
+    display: grid;
+
+    grid-template-columns:
+        minmax(0, 1fr)
+        minmax(0, 1fr);
+
     gap: 14px;
+
+    align-items: end;
+}
+
+/* INTERVALO */
+
+.interval-selector {
+    display: flex;
+    flex-direction: column;
+
+    gap: 12px;
+}
+
+.interval-card {
+    min-height: 80px;
+
+    box-sizing: border-box;
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    gap: 16px;
+
+    padding: 14px;
+
+    background: #101927;
+
+    border: 1px solid #354158;
+    border-radius: 9px;
+}
+
+.interval-button {
+    width: 34px;
+    height: 34px;
+
+    display: grid;
+
+    place-items: center;
+
+    padding: 0;
+
+    color: #d2a1ff;
+
+    background: #2a1c3d;
+
+    border: 1px solid #654287;
+    border-radius: 6px;
+
+    font-family: inherit;
+    font-size: 18px;
+
+    cursor: pointer;
+
+    transition: 0.2s;
+}
+
+.interval-button:hover:not(:disabled) {
+    color: white;
+
+    background: #42245e;
+
+    border-color: #9851df;
+}
+
+.interval-button:disabled {
+    opacity: 0.35;
+
+    cursor: not-allowed;
+}
+
+.interval-value {
+    min-width: 100px;
+
+    display: flex;
+
+    align-items: baseline;
+    justify-content: center;
+
+    gap: 7px;
+}
+
+.interval-value strong {
+    color: #eef1f7;
+
+    font-size: 18px;
+}
+
+.interval-value span {
+    color: #8996aa;
+
+    font-size: 10px;
 }
 
 /* RESUMO */
@@ -393,9 +594,9 @@ function cancel() {
     display: flex;
     flex-direction: column;
 
-    gap: 8px;
+    gap: 10px;
 
-    padding: 16px;
+    padding: 17px;
 
     background: #101927;
 
@@ -403,29 +604,34 @@ function cancel() {
     border-radius: 8px;
 }
 
-.summary-label {
-    color: #b16cff;
-
-    font-size: 9px;
-
-    letter-spacing: 2px;
-}
-
 .summary strong {
-    color: #eef1f7;
-
-    font-size: 13px;
+    font-size: 14px;
+    font-weight: 400;
 }
 
-.summary > span:not(
-    .summary-label
-) {
+.summary-details {
+    display: flex;
+
+    flex-wrap: wrap;
+
+    gap: 18px;
+
     color: #8190a6;
 
     font-size: 10px;
 }
 
-/* BOTÕES */
+/* VALIDAÇÃO */
+
+.form-warning {
+    margin: -10px 0 0;
+
+    color: #8190a6;
+
+    font-size: 9px;
+}
+
+/* AÇÕES */
 
 .form-actions {
     display: flex;
@@ -434,7 +640,10 @@ function cancel() {
 
     gap: 12px;
 
-    padding-top: 5px;
+    padding-top: 15px;
+
+    border-top:
+        1px solid #29364a;
 }
 
 .cancel-button,
@@ -477,11 +686,13 @@ function cancel() {
     cursor: not-allowed;
 }
 
-/* RESPONSIVO */
-
-@media (max-width: 700px) {
+@media (max-width: 750px) {
     .daily-form {
         padding: 16px;
+    }
+
+    .schedule-grid {
+        grid-template-columns: 1fr;
     }
 
     .form-actions {
