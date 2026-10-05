@@ -117,7 +117,7 @@ function selectMission(type) {
             </div>
 
             <span>
-                HABIT QUEST
+                QuestLife
             </span>
         </div>
 
