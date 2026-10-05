@@ -5,146 +5,87 @@ import { defaultPlayer } from "../data/player"
 
 const PLAYER_KEY = "player"
 
-const CURRENT_PLAYER_VERSION = 2
-
 const storedPlayer =
     storageService.get(PLAYER_KEY)
 
 /*
- * Cria o jogador inicial.
+ * Cria o estado inicial do jogador.
  *
- * Se já houver jogador salvo,
- * preservamos os dados existentes.
+ * Se já existir um jogador salvo no
+ * localStorage, preservamos os dados.
+ *
+ * Também garantimos compatibilidade
+ * com jogadores criados antes da
+ * implementação do inventário.
  */
-let initialPlayer = storedPlayer
+const initialPlayer = storedPlayer
     ? {
         ...defaultPlayer,
-        ...storedPlayer
+        ...storedPlayer,
+
+        health:
+            typeof storedPlayer.health === "number"
+                ? storedPlayer.health
+                : 100,
+
+        maxHealth:
+            typeof storedPlayer.maxHealth === "number"
+                ? storedPlayer.maxHealth
+                : 100,
+
+        inventory:
+            storedPlayer.inventory &&
+            typeof storedPlayer.inventory === "object" &&
+            !Array.isArray(storedPlayer.inventory)
+                ? storedPlayer.inventory
+                : {}
     }
     : {
-        ...defaultPlayer
-    }
-
-/*
- * ========================================
- * MIGRAÇÃO DOS DADOS ANTIGOS
- * ========================================
- *
- * Nas versões antigas do projeto,
- * o HP podia ser salvo inicialmente
- * como 0.
- *
- * Essa correção acontece somente uma vez.
- */
-const playerVersion =
-    Number(
-        initialPlayer.dataVersion || 1
-    )
-
-if (playerVersion < 2) {
-    initialPlayer = {
-        ...initialPlayer,
+        ...defaultPlayer,
 
         health: 100,
         maxHealth: 100,
 
-        dataVersion: 2
+        inventory: {}
     }
-}
 
 /*
- * Garante que maxHealth seja válido.
- */
-if (
-    typeof initialPlayer.maxHealth !==
-        "number" ||
-    initialPlayer.maxHealth <= 0
-) {
-    initialPlayer.maxHealth = 100
-}
-
-/*
- * Garante que health exista.
- */
-if (
-    typeof initialPlayer.health !==
-    "number"
-) {
-    initialPlayer.health =
-        initialPlayer.maxHealth
-}
-
-/*
- * Mantém o HP entre 0 e o máximo.
- */
-initialPlayer.health =
-    Math.min(
-        initialPlayer.maxHealth,
-
-        Math.max(
-            0,
-            initialPlayer.health
-        )
-    )
-
-initialPlayer.dataVersion =
-    CURRENT_PLAYER_VERSION
-
-/*
- * Salva o jogador já normalizado.
+ * Salva a estrutura atualizada.
+ *
+ * Isso também adiciona inventory: {}
+ * automaticamente para jogadores
+ * antigos que ainda não possuíam
+ * inventário.
  */
 storageService.save(
     PLAYER_KEY,
     initialPlayer
 )
 
+/*
+ * Estado reativo compartilhado.
+ */
 const player =
     ref(initialPlayer)
 
 const playerService = {
     player,
 
+    /*
+     * Retorna o jogador atual.
+     */
     getPlayer() {
         return player.value
     },
 
+    /*
+     * Atualiza somente os dados
+     * informados.
+     */
     updatePlayer(updatedData) {
         const updatedPlayer = {
             ...player.value,
-            ...updatedData,
-
-            dataVersion:
-                CURRENT_PLAYER_VERSION
-        }
-
-        /*
-         * Garante um maxHealth válido.
-         */
-        if (
-            typeof updatedPlayer.maxHealth !==
-                "number" ||
-            updatedPlayer.maxHealth <= 0
-        ) {
-            updatedPlayer.maxHealth = 100
-        }
-
-        /*
-         * Impede HP negativo ou acima
-         * do máximo.
-         */
-        if (
-            typeof updatedPlayer.health ===
-            "number"
-        ) {
-            updatedPlayer.health =
-                Math.min(
-                    updatedPlayer.maxHealth,
-
-                    Math.max(
-                        0,
-                        updatedPlayer.health
-                    )
-                )
+            ...updatedData
         }
 
         player.value =
@@ -155,25 +96,128 @@ const playerService = {
             updatedPlayer
         )
 
-        /*
-         * A AppSidebar escuta este evento
-         * para atualizar XP, moedas e HP.
-         */
-        window.dispatchEvent(
-            new CustomEvent(
-                "player-updated"
-            )
-        )
-
         return updatedPlayer
     },
 
+    /*
+     * Recupera toda a vida.
+     */
     resetHealth() {
+        const maxHealth =
+            player.value.maxHealth || 100
+
         return this.updatePlayer({
-            health:
-                player.value.maxHealth ||
-                100
+            health: maxHealth
         })
+    },
+
+    /*
+     * Retorna o inventário atual.
+     */
+    getInventory() {
+        return (
+            player.value.inventory || {}
+        )
+    },
+
+    /*
+     * Retorna a quantidade que o
+     * jogador possui de determinado
+     * item.
+     *
+     * Exemplo:
+     *
+     * getItemQuantity("healthPotion")
+     */
+    getItemQuantity(itemId) {
+        const inventory =
+            this.getInventory()
+
+        return (
+            inventory[itemId] || 0
+        )
+    },
+
+    /*
+     * Adiciona determinada quantidade
+     * de um item ao inventário.
+     */
+    addItem(
+        itemId,
+        quantity = 1
+    ) {
+        if (
+            !itemId ||
+            quantity <= 0
+        ) {
+            return player.value
+        }
+
+        const inventory = {
+            ...this.getInventory()
+        }
+
+        const currentQuantity =
+            inventory[itemId] || 0
+
+        inventory[itemId] =
+            currentQuantity + quantity
+
+        return this.updatePlayer({
+            inventory
+        })
+    },
+
+    /*
+     * Remove determinada quantidade
+     * de um item.
+     *
+     * Retorna false caso o jogador
+     * não possua itens suficientes.
+     */
+    removeItem(
+        itemId,
+        quantity = 1
+    ) {
+        if (
+            !itemId ||
+            quantity <= 0
+        ) {
+            return false
+        }
+
+        const inventory = {
+            ...this.getInventory()
+        }
+
+        const currentQuantity =
+            inventory[itemId] || 0
+
+        if (
+            currentQuantity < quantity
+        ) {
+            return false
+        }
+
+        const newQuantity =
+            currentQuantity - quantity
+
+        /*
+         * Se chegou a zero, removemos
+         * a propriedade do inventário.
+         */
+        if (newQuantity === 0) {
+            delete inventory[itemId]
+        } else {
+            inventory[itemId] =
+                newQuantity
+        }
+
+        this.updatePlayer({
+            inventory
+        })
+
+        return true
     }
 }
 

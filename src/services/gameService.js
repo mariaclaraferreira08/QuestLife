@@ -5,6 +5,12 @@ import dailyService from "./dailyService"
 
 import { difficulties } from "../data/difficulties"
 
+const PROTECTION_ITEM_ID =
+    "protectionAmulet"
+
+const PROTECTION_PERCENTAGE =
+    0.5
+
 const gameService = {
     getDifficulty(difficulty) {
         return difficulties[difficulty]
@@ -81,6 +87,49 @@ const gameService = {
         })
     },
 
+    /*
+     * =========================
+     * PROTEÇÃO
+     * =========================
+     */
+
+    hasProtectionAmulet() {
+        return (
+            playerService.getItemQuantity(
+                PROTECTION_ITEM_ID
+            ) > 0
+        )
+    },
+
+    calculateDamage(amount) {
+        if (!this.hasProtectionAmulet()) {
+            return {
+                originalDamage: amount,
+                finalDamage: amount,
+                protected: false
+            }
+        }
+
+        /*
+         * O amuleto reduz 50%
+         * do próximo dano.
+         *
+         * Math.ceil impede que um dano
+         * pequeno vire zero.
+         */
+        const finalDamage =
+            Math.ceil(
+                amount *
+                (1 - PROTECTION_PERCENTAGE)
+            )
+
+        return {
+            originalDamage: amount,
+            finalDamage,
+            protected: true
+        }
+    },
+
     takeDamage(amount) {
         const player =
             playerService.getPlayer()
@@ -90,15 +139,49 @@ const gameService = {
                 ? player.health
                 : 100
 
+        const damage =
+            this.calculateDamage(
+                amount
+            )
+
         const newHealth =
             Math.max(
                 0,
-                currentHealth - amount
+                currentHealth -
+                damage.finalDamage
             )
 
-        return playerService.updatePlayer({
+        /*
+         * Atualiza a vida primeiro.
+         */
+        playerService.updatePlayer({
             health: newHealth
         })
+
+        /*
+         * Se houve proteção,
+         * o amuleto é consumido.
+         */
+        if (damage.protected) {
+            playerService.removeItem(
+                PROTECTION_ITEM_ID,
+                1
+            )
+        }
+
+        return {
+            player:
+                playerService.getPlayer(),
+
+            originalDamage:
+                damage.originalDamage,
+
+            damageTaken:
+                damage.finalDamage,
+
+            protected:
+                damage.protected
+        }
     },
 
     /*
@@ -144,15 +227,22 @@ const gameService = {
             return null
         }
 
-        this.takeDamage(
-            reward.damage
-        )
+        const damageResult =
+            this.takeDamage(
+                reward.damage
+            )
 
         this.removeCoins(
             reward.coins
         )
 
-        return playerService.getPlayer()
+        return {
+            player:
+                playerService.getPlayer(),
+
+            damage:
+                damageResult
+        }
     },
 
     /*
@@ -248,14 +338,20 @@ const gameService = {
             taskId
         )
 
-        const player =
+        const punishment =
             this.failTask(
                 task.difficulty
             )
 
         return {
             success: true,
-            player
+
+            player:
+                punishment?.player ||
+                punishment,
+
+            damage:
+                punishment?.damage
         }
     },
 
@@ -330,17 +426,24 @@ const gameService = {
             return result
         }
 
-        const player =
+        const punishment =
             this.punishPlayer(
                 habit.difficulty
             )
 
         return {
             success: true,
+
             habit:
                 result?.habit ||
                 result,
-            player
+
+            player:
+                punishment?.player ||
+                punishment,
+
+            damage:
+                punishment?.damage
         }
     },
 
@@ -406,17 +509,34 @@ const gameService = {
             return result
         }
 
-        const player =
+        const punishment =
             this.punishPlayer(
                 daily.difficulty
             )
 
         return {
             success: true,
-            daily: result.daily,
-            player
+
+            daily:
+                result.daily,
+
+            player:
+                punishment?.player ||
+                punishment,
+
+            damage:
+                punishment?.damage
         }
     }
+}
+
+/*
+ * TEMPORÁRIO:
+ * facilita os testes no console.
+ */
+if (typeof window !== "undefined") {
+    window.gameService =
+        gameService
 }
 
 export default gameService
