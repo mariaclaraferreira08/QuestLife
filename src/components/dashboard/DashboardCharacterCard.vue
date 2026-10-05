@@ -11,10 +11,7 @@ function percentage(value, max) {
 
     return Math.min(
         100,
-        Math.max(
-            0,
-            (value / max) * 100
-        )
+        Math.max(0, (value / max) * 100)
     )
 }
 </script>
@@ -30,7 +27,11 @@ function percentage(value, max) {
         </header>
 
         <div class="avatar">
-            {{ player.name?.charAt(0) || "Q" }}
+            <img
+                src="/assets/player/player-cat.png"
+                alt="Personagem do jogador"
+                class="avatar-image"
+            />
         </div>
 
         <h2>
@@ -112,7 +113,7 @@ function percentage(value, max) {
     align-items: center;
     justify-content: space-between;
     gap: 12px;
-    margin-bottom: 24px;
+    margin-bottom: 22px;
 }
 
 .character-header span {
@@ -128,30 +129,63 @@ function percentage(value, max) {
     background: #101927;
     border: 1px solid #3a475c;
     border-radius: 7px;
+    font-family: inherit;
     font-size: 9px;
     font-weight: 700;
+    cursor: pointer;
+}
+
+.character-header button:hover {
+    border-color: #8652b3;
+    color: white;
 }
 
 .avatar {
-    width: 100px;
-    height: 100px;
-    margin: 0 auto 15px;
-    display: grid;
-    place-items: center;
-    color: white;
+    width: 180px;
+    height: 180px;
+    margin: 0 auto 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    position: relative;
+
     background:
-        linear-gradient(
-            135deg,
-            #7626dc,
-            #a526ef
+        radial-gradient(
+            circle at center,
+            rgba(166, 82, 219, 0.18),
+            transparent 65%
+        ),
+        #101927;
+
+    border: 1px solid #4b3c60;
+    border-radius: 18px;
+}
+
+.avatar::after {
+    content: "";
+    position: absolute;
+    left: 20%;
+    right: 20%;
+    bottom: 10px;
+    height: 12px;
+    background: rgba(0, 0, 0, 0.25);
+    border-radius: 50%;
+    filter: blur(5px);
+}
+
+.avatar-image {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    z-index: 1;
+    object-fit: contain;
+    object-position: center;
+    filter:
+        drop-shadow(
+            0 8px 10px
+            rgba(0, 0, 0, 0.25)
         );
-    border: 1px solid #bd70ff;
-    border-radius: 22px;
-    box-shadow:
-        0 0 25px
-        rgba(165, 38, 239, 0.18);
-    font-size: 38px;
-    font-weight: 800;
 }
 
 .character-card h2 {
@@ -203,6 +237,7 @@ function percentage(value, max) {
 .fill {
     height: 100%;
     border-radius: inherit;
+    transition: width 0.25s;
 }
 
 .fill.xp {
@@ -232,5 +267,19 @@ function percentage(value, max) {
 
 .coins strong {
     color: #f3c969;
+}
+
+@media (max-width: 1050px) {
+    .avatar {
+        width: 200px;
+        height: 200px;
+    }
+}
+
+@media (max-width: 700px) {
+    .avatar {
+        width: 170px;
+        height: 170px;
+    }
 }
 </style>
