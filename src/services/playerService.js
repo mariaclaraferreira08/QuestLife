@@ -5,6 +5,11 @@ import { defaultPlayer } from "../data/player"
 
 const PLAYER_KEY = "player"
 
+const emptyEffects = {
+    protection: null,
+    streakProtection: null
+}
+
 const storedPlayer =
     storageService.get(PLAYER_KEY)
 
@@ -29,13 +34,27 @@ const initialPlayer =
                 typeof storedPlayer.inventory === "object" &&
                 !Array.isArray(storedPlayer.inventory)
                     ? storedPlayer.inventory
-                    : {}
+                    : {},
+
+            activeEffects:
+                storedPlayer.activeEffects &&
+                typeof storedPlayer.activeEffects === "object"
+                    ? {
+                        ...emptyEffects,
+                        ...storedPlayer.activeEffects
+                    }
+                    : {
+                        ...emptyEffects
+                    }
         }
         : {
             ...defaultPlayer,
             health: 100,
             maxHealth: 100,
-            inventory: {}
+            inventory: {},
+            activeEffects: {
+                ...emptyEffects
+            }
         }
 
 storageService.save(
@@ -122,8 +141,7 @@ const playerService = {
             inventory[itemId] || 0
 
         inventory[itemId] =
-            currentQuantity +
-            quantity
+            currentQuantity + quantity
 
         return this.updatePlayer({
             inventory
@@ -149,15 +167,13 @@ const playerService = {
             inventory[itemId] || 0
 
         if (
-            currentQuantity <
-            quantity
+            currentQuantity < quantity
         ) {
             return false
         }
 
         const newQuantity =
-            currentQuantity -
-            quantity
+            currentQuantity - quantity
 
         if (newQuantity === 0) {
             delete inventory[itemId]
@@ -171,20 +187,58 @@ const playerService = {
         })
 
         return true
+    },
+
+    /*
+     * =========================
+     * EFEITOS ATIVOS
+     * =========================
+     */
+
+    getActiveEffects() {
+        return (
+            player.value.activeEffects ||
+            {
+                ...emptyEffects
+            }
+        )
+    },
+
+    getActiveEffect(effectKey) {
+        return (
+            this.getActiveEffects()[
+                effectKey
+            ] || null
+        )
+    },
+
+    setActiveEffect(
+        effectKey,
+        effect
+    ) {
+        const activeEffects = {
+            ...this.getActiveEffects(),
+            [effectKey]: effect
+        }
+
+        return this.updatePlayer({
+            activeEffects
+        })
+    },
+
+    clearActiveEffect(effectKey) {
+        const activeEffects = {
+            ...this.getActiveEffects(),
+            [effectKey]: null
+        }
+
+        return this.updatePlayer({
+            activeEffects
+        })
     }
 }
 
-/*
- * TEMPORÁRIO:
- * deixa o playerService disponível
- * no console do navegador
- * para facilitar os testes.
- */
-
-if (
-    typeof window !==
-    "undefined"
-) {
+if (typeof window !== "undefined") {
     window.playerService =
         playerService
 }

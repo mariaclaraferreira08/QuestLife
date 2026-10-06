@@ -57,29 +57,14 @@ const alreadyCompletedToday = computed(() => {
 })
 
 const scheduledToday = computed(() => {
-    /*
-     * Diário:
-     * pode ser concluído todos os dias.
-     */
     if (frequency.value === "daily") {
         return true
     }
 
-    /*
-     * Mensal:
-     * pode ser concluído em qualquer dia,
-     * desde que ainda não tenha sido
-     * concluído hoje.
-     */
     if (frequency.value === "monthly") {
         return true
     }
 
-    /*
-     * Semanal:
-     * só pode ser concluído nos dias
-     * escolhidos pelo usuário.
-     */
     if (frequency.value === "weekly") {
         const dayNames = [
             "sunday",
@@ -111,14 +96,16 @@ const canComplete = computed(() => {
 })
 
 const canFailManually = computed(() => {
-    /*
-     * Apenas hábitos diários possuem
-     * falha manual.
-     *
-     * Semanal e mensal são avaliados
-     * pela meta do período.
-     */
     return frequency.value === "daily"
+})
+
+const canFail = computed(() => {
+    return (
+        canFailManually.value &&
+        scheduledToday.value &&
+        !alreadyCompletedToday.value &&
+        !props.habit.failed
+    )
 })
 
 function completeHabit() {
@@ -133,10 +120,7 @@ function completeHabit() {
 }
 
 function failHabit() {
-    if (
-        !canFailManually.value ||
-        props.habit.failed
-    ) {
+    if (!canFail.value) {
         return
     }
 
@@ -176,8 +160,6 @@ function restoreStreak() {
             failed: habit.failed
         }"
     >
-        <!-- CABEÇALHO -->
-
         <header class="habit-header">
             <div class="habit-title-area">
                 <div class="habit-icon">
@@ -224,8 +206,6 @@ function restoreStreak() {
             </button>
         </header>
 
-        <!-- STATUS -->
-
         <div
             v-if="alreadyCompletedToday"
             class="habit-message completed-message"
@@ -244,27 +224,18 @@ function restoreStreak() {
             v-else-if="!scheduledToday"
             class="habit-message rest-message"
         >
-            ◷ ESTE HÁBITO NÃO ESTÁ PROGRAMADO
-            PARA HOJE
+            ◷ ESTE HÁBITO NÃO ESTÁ PROGRAMADO PARA HOJE
         </div>
-
-        <!-- PROGRAMAÇÃO / PROGRESSO -->
 
         <HabitSchedule
             :habit="habit"
         />
 
-        <!-- SEQUÊNCIA -->
-
         <HabitStats
             :habit="habit"
         />
 
-        <!-- AÇÕES -->
-
         <footer class="habit-actions">
-            <!-- HÁBITO QUE JÁ FALHOU -->
-
             <template v-if="habit.failed">
                 <button
                     type="button"
@@ -275,8 +246,6 @@ function restoreStreak() {
                 </button>
             </template>
 
-            <!-- HÁBITO ATIVO -->
-
             <template v-else>
                 <button
                     type="button"
@@ -284,15 +253,11 @@ function restoreStreak() {
                     :disabled="!canComplete"
                     @click="completeHabit"
                 >
-                    <template
-                        v-if="alreadyCompletedToday"
-                    >
+                    <template v-if="alreadyCompletedToday">
                         ✓ CONCLUÍDO HOJE
                     </template>
 
-                    <template
-                        v-else-if="!scheduledToday"
-                    >
+                    <template v-else-if="!scheduledToday">
                         NÃO PROGRAMADO HOJE
                     </template>
 
@@ -301,18 +266,24 @@ function restoreStreak() {
                     </template>
                 </button>
 
-                <!--
-                    Falha manual existe
-                    somente para hábitos diários.
-                -->
-
                 <button
                     v-if="canFailManually"
                     type="button"
                     class="fail-button"
+                    :disabled="!canFail"
                     @click="failHabit"
                 >
-                    ✕ FALHEI
+                    <template v-if="alreadyCompletedToday">
+                        ✕ JÁ CONCLUÍDO
+                    </template>
+
+                    <template v-else-if="!scheduledToday">
+                        NÃO PROGRAMADO HOJE
+                    </template>
+
+                    <template v-else>
+                        ✕ FALHEI
+                    </template>
                 </button>
             </template>
         </footer>
@@ -323,18 +294,12 @@ function restoreStreak() {
 .habit-card {
     display: flex;
     flex-direction: column;
-
     gap: 16px;
-
     padding: 20px;
-
     color: #eef1f7;
-
     background: #151f30;
-
     border: 1px solid #354158;
     border-radius: 11px;
-
     transition: 0.2s;
 }
 
@@ -346,74 +311,54 @@ function restoreStreak() {
     border-color: #74394b;
 }
 
-/* CABEÇALHO */
-
 .habit-header {
     display: flex;
-
     align-items: flex-start;
     justify-content: space-between;
-
     gap: 20px;
 }
 
 .habit-title-area {
     display: flex;
-
     align-items: flex-start;
-
     gap: 13px;
 }
 
 .habit-icon {
     width: 38px;
     height: 38px;
-
     flex-shrink: 0;
-
     display: grid;
     place-items: center;
-
     background: #211b35;
-
     border: 1px solid #493269;
     border-radius: 8px;
-
     font-size: 18px;
 }
 
 .title-row {
     display: flex;
-
     align-items: center;
     flex-wrap: wrap;
-
     gap: 10px;
 }
 
 .title-row h2 {
     margin: 0;
-
     font-size: 17px;
 }
 
 .habit-title-area p {
     margin: 6px 0 0;
-
     color: #8794a8;
-
     font-size: 12px;
 }
-
-/* DIFICULDADE */
 
 .difficulty,
 .frequency-badge {
     padding: 4px 8px;
-
     border: 1px solid;
     border-radius: 20px;
-
     font-size: 9px;
     letter-spacing: 1px;
 }
@@ -440,29 +385,18 @@ function restoreStreak() {
 
 .frequency-badge {
     color: #b477e8;
-
-    background:
-        rgba(138, 65, 194, 0.08);
-
+    background: rgba(138, 65, 194, 0.08);
     border-color: #674082;
 }
-
-/* EXCLUIR */
 
 .delete-button {
     width: 30px;
     height: 30px;
-
     flex-shrink: 0;
-
     color: #667389;
-
     background: transparent;
-
     border: 0;
-
     font-size: 21px;
-
     cursor: pointer;
 }
 
@@ -470,50 +404,34 @@ function restoreStreak() {
     color: #ff617a;
 }
 
-/* MENSAGENS */
-
 .habit-message {
     padding: 9px 12px;
-
     border-radius: 6px;
-
     font-size: 9px;
     letter-spacing: 1px;
 }
 
 .completed-message {
     color: #54d6ab;
-
-    background:
-        rgba(51, 184, 143, 0.08);
-
+    background: rgba(51, 184, 143, 0.08);
     border: 1px solid #276c5b;
 }
 
 .failed-message {
     color: #ef7889;
-
-    background:
-        rgba(199, 67, 90, 0.08);
-
+    background: rgba(199, 67, 90, 0.08);
     border: 1px solid #733848;
 }
 
 .rest-message {
     color: #8e9aad;
-
     background: #101927;
-
     border: 1px solid #2e3a4d;
 }
 
-/* AÇÕES */
-
 .habit-actions {
     display: flex;
-
     gap: 10px;
-
     padding-top: 3px;
 }
 
@@ -521,28 +439,19 @@ function restoreStreak() {
 .fail-button,
 .restore-button {
     min-height: 40px;
-
     padding: 10px 16px;
-
     border-radius: 7px;
-
     font-family: inherit;
-
     font-size: 10px;
     font-weight: bold;
-
     cursor: pointer;
-
     transition: 0.2s;
 }
 
 .complete-button {
     flex: 1;
-
     color: #09291f;
-
     background: #45d3a4;
-
     border: 1px solid #5ce5b8;
 }
 
@@ -552,40 +461,40 @@ function restoreStreak() {
 
 .complete-button:disabled {
     color: #637083;
-
     background: #111a28;
-
     border-color: #303b4d;
-
     cursor: not-allowed;
-
     opacity: 0.7;
 }
 
 .fail-button {
     color: #e88190;
-
     background: #1d1721;
-
     border: 1px solid #713847;
 }
 
-.fail-button:hover {
+.fail-button:hover:not(:disabled) {
     background: #291920;
+    transform: translateY(-1px);
+}
+
+.fail-button:disabled {
+    color: #637083;
+    background: #111a28;
+    border-color: #303b4d;
+    cursor: not-allowed;
+    opacity: 0.7;
 }
 
 .restore-button {
     width: 100%;
-
     color: white;
-
     background:
         linear-gradient(
             90deg,
             #6827b8,
             #9d2ce1
         );
-
     border: 1px solid #a75ce9;
 }
 
@@ -594,8 +503,6 @@ function restoreStreak() {
         0 0 14px
         rgba(157, 44, 225, 0.2);
 }
-
-/* RESPONSIVO */
 
 @media (max-width: 600px) {
     .habit-header {

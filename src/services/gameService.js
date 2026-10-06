@@ -5,14 +5,14 @@ import dailyService from "./dailyService"
 
 import { difficulties } from "../data/difficulties"
 
-const PROTECTION_ITEM_ID = "protectionAmulet"
-const STREAK_ITEM_ID = "streakPotion"
-
-const PROTECTION_PERCENTAGE = 0.5
+const PROTECTION_PERCENTAGE =
+    0.5
 
 const gameService = {
     getDifficulty(difficulty) {
-        return difficulties[difficulty]
+        return difficulties[
+            difficulty
+        ]
     },
 
     /*
@@ -22,10 +22,12 @@ const gameService = {
      */
 
     addXP(amount) {
-        const player = playerService.getPlayer()
+        const player =
+            playerService.getPlayer()
 
         const newXP =
-            (player.xp || 0) + amount
+            (player.xp || 0) +
+            amount
 
         playerService.updatePlayer({
             xp: newXP
@@ -60,7 +62,8 @@ const gameService = {
             playerService.getPlayer()
 
         const newCoins =
-            (player.coins || 0) + amount
+            (player.coins || 0) +
+            amount
 
         return playerService.updatePlayer({
             coins: newCoins
@@ -77,7 +80,8 @@ const gameService = {
         const newCoins =
             Math.max(
                 0,
-                currentCoins - amount
+                currentCoins -
+                amount
             )
 
         return playerService.updatePlayer({
@@ -87,51 +91,95 @@ const gameService = {
 
     /*
      * =========================
-     * AMULETO DE PROTEÇÃO
+     * AMULETO
      * =========================
      */
 
-    hasProtectionAmulet() {
+    hasProtectionFor(
+        targetType,
+        targetId
+    ) {
+        const effect =
+            playerService.getActiveEffect(
+                "protection"
+            )
+
+        if (!effect) {
+            return false
+        }
+
         return (
-            playerService.getItemQuantity(
-                PROTECTION_ITEM_ID
-            ) > 0
+            effect.targetType ===
+                targetType &&
+            effect.targetId ===
+                targetId
         )
     },
 
-    calculateDamage(amount) {
-        if (!this.hasProtectionAmulet()) {
+    calculateDamage(
+        amount,
+        targetType,
+        targetId
+    ) {
+        const protectedTarget =
+            this.hasProtectionFor(
+                targetType,
+                targetId
+            )
+
+        if (!protectedTarget) {
             return {
-                originalDamage: amount,
-                finalDamage: amount,
-                protected: false
+                originalDamage:
+                    amount,
+
+                finalDamage:
+                    amount,
+
+                protected:
+                    false
             }
         }
 
         const finalDamage =
             Math.ceil(
                 amount *
-                (1 - PROTECTION_PERCENTAGE)
+                (
+                    1 -
+                    PROTECTION_PERCENTAGE
+                )
             )
 
         return {
-            originalDamage: amount,
+            originalDamage:
+                amount,
+
             finalDamage,
-            protected: true
+
+            protected:
+                true
         }
     },
 
-    takeDamage(amount) {
+    takeDamage(
+        amount,
+        targetType = null,
+        targetId = null
+    ) {
         const player =
             playerService.getPlayer()
 
         const currentHealth =
-            typeof player.health === "number"
+            typeof player.health ===
+            "number"
                 ? player.health
                 : 100
 
         const damage =
-            this.calculateDamage(amount)
+            this.calculateDamage(
+                amount,
+                targetType,
+                targetId
+            )
 
         const newHealth =
             Math.max(
@@ -141,13 +189,19 @@ const gameService = {
             )
 
         playerService.updatePlayer({
-            health: newHealth
+            health:
+                newHealth
         })
 
+        /*
+         * A proteção já saiu da mochila
+         * quando foi equipada.
+         *
+         * Agora apenas removemos o efeito.
+         */
         if (damage.protected) {
-            playerService.removeItem(
-                PROTECTION_ITEM_ID,
-                1
+            playerService.clearActiveEffect(
+                "protection"
             )
         }
 
@@ -168,22 +222,27 @@ const gameService = {
 
     /*
      * =========================
-     * ELIXIR DA PERSISTÊNCIA
+     * ELIXIR DE STREAK
      * =========================
      */
 
-    hasStreakPotion() {
-        return (
-            playerService.getItemQuantity(
-                STREAK_ITEM_ID
-            ) > 0
-        )
-    },
+    hasStreakProtectionFor(
+        dailyId
+    ) {
+        const effect =
+            playerService.getActiveEffect(
+                "streakProtection"
+            )
 
-    consumeStreakPotion() {
-        return playerService.removeItem(
-            STREAK_ITEM_ID,
-            1
+        if (!effect) {
+            return false
+        }
+
+        return (
+            effect.targetType ===
+                "daily" &&
+            effect.targetId ===
+                dailyId
         )
     },
 
@@ -211,7 +270,9 @@ const gameService = {
             reward.coins
         )
 
-        return playerService.getPlayer()
+        return (
+            playerService.getPlayer()
+        )
     },
 
     /*
@@ -220,7 +281,11 @@ const gameService = {
      * =========================
      */
 
-    punishPlayer(difficulty) {
+    punishPlayer(
+        difficulty,
+        targetType,
+        targetId
+    ) {
         const reward =
             this.getDifficulty(
                 difficulty
@@ -232,7 +297,9 @@ const gameService = {
 
         const damageResult =
             this.takeDamage(
-                reward.damage
+                reward.damage,
+                targetType,
+                targetId
             )
 
         this.removeCoins(
@@ -269,7 +336,8 @@ const gameService = {
         if (!task) {
             return {
                 success: false,
-                reason: "task-not-found"
+                reason:
+                    "task-not-found"
             }
         }
 
@@ -279,7 +347,8 @@ const gameService = {
         ) {
             return {
                 success: false,
-                reason: "task-finished"
+                reason:
+                    "task-finished"
             }
         }
 
@@ -292,10 +361,13 @@ const gameService = {
                     !subtask.completed
             )
 
-        if (hasPendingSubtasks) {
+        if (
+            hasPendingSubtasks
+        ) {
             return {
                 success: false,
-                reason: "pending-subtasks"
+                reason:
+                    "pending-subtasks"
             }
         }
 
@@ -323,7 +395,8 @@ const gameService = {
         if (!task) {
             return {
                 success: false,
-                reason: "task-not-found"
+                reason:
+                    "task-not-found"
             }
         }
 
@@ -333,7 +406,8 @@ const gameService = {
         ) {
             return {
                 success: false,
-                reason: "task-finished"
+                reason:
+                    "task-finished"
             }
         }
 
@@ -342,26 +416,21 @@ const gameService = {
         )
 
         const punishment =
-            this.failTask(
-                task.difficulty
+            this.punishPlayer(
+                task.difficulty,
+                "task",
+                taskId
             )
 
         return {
             success: true,
 
             player:
-                punishment?.player ||
-                punishment,
+                punishment?.player,
 
             damage:
                 punishment?.damage
         }
-    },
-
-    failTask(difficulty) {
-        return this.punishPlayer(
-            difficulty
-        )
     },
 
     /*
@@ -379,7 +448,8 @@ const gameService = {
         if (!habit) {
             return {
                 success: false,
-                reason: "habit-not-found"
+                reason:
+                    "habit-not-found"
             }
         }
 
@@ -399,7 +469,8 @@ const gameService = {
 
         return {
             success: true,
-            habit: result.habit,
+            habit:
+                result.habit,
             player
         }
     },
@@ -413,7 +484,8 @@ const gameService = {
         if (!habit) {
             return {
                 success: false,
-                reason: "habit-not-found"
+                reason:
+                    "habit-not-found"
             }
         }
 
@@ -431,7 +503,9 @@ const gameService = {
 
         const punishment =
             this.punishPlayer(
-                habit.difficulty
+                habit.difficulty,
+                "habit",
+                habitId
             )
 
         return {
@@ -442,8 +516,7 @@ const gameService = {
                 result,
 
             player:
-                punishment?.player ||
-                punishment,
+                punishment?.player,
 
             damage:
                 punishment?.damage
@@ -465,7 +538,8 @@ const gameService = {
         if (!daily) {
             return {
                 success: false,
-                reason: "daily-not-found"
+                reason:
+                    "daily-not-found"
             }
         }
 
@@ -485,7 +559,8 @@ const gameService = {
 
         return {
             success: true,
-            daily: result.daily,
+            daily:
+                result.daily,
             player
         }
     },
@@ -499,16 +574,19 @@ const gameService = {
         if (!daily) {
             return {
                 success: false,
-                reason: "daily-not-found"
+                reason:
+                    "daily-not-found"
             }
         }
 
         const previousStreak =
             daily.streak || 0
 
-        const hasStreakProtection =
+        const streakProtected =
             previousStreak > 0 &&
-            this.hasStreakPotion()
+            this.hasStreakProtectionFor(
+                dailyId
+            )
 
         const result =
             dailyService.failDaily(
@@ -522,10 +600,7 @@ const gameService = {
         let updatedDaily =
             result.daily
 
-        let streakProtected =
-            false
-
-        if (hasStreakProtection) {
+        if (streakProtected) {
             updatedDaily =
                 dailyService.updateDaily(
                     dailyId,
@@ -535,14 +610,16 @@ const gameService = {
                     }
                 )
 
-            this.consumeStreakPotion()
-
-            streakProtected = true
+            playerService.clearActiveEffect(
+                "streakProtection"
+            )
         }
 
         const punishment =
             this.punishPlayer(
-                daily.difficulty
+                daily.difficulty,
+                "daily",
+                dailyId
             )
 
         return {
@@ -552,8 +629,7 @@ const gameService = {
                 updatedDaily,
 
             player:
-                punishment?.player ||
-                punishment,
+                punishment?.player,
 
             damage:
                 punishment?.damage,
@@ -562,11 +638,6 @@ const gameService = {
         }
     }
 }
-
-/*
- * TEMPORÁRIO:
- * facilita os testes no console.
- */
 
 if (typeof window !== "undefined") {
     window.gameService =

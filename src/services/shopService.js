@@ -2,14 +2,10 @@ import playerService from "./playerService"
 import { shopItems } from "../data/shopItems"
 
 const shopService = {
-    /*
-     * =========================
-     * CATÁLOGO
-     * =========================
-     */
-
     getItems() {
-        return Object.values(shopItems)
+        return Object.values(
+            shopItems
+        )
     },
 
     getItemById(itemId) {
@@ -17,7 +13,10 @@ const shopService = {
             return null
         }
 
-        return shopItems[itemId] || null
+        return (
+            shopItems[itemId] ||
+            null
+        )
     },
 
     /*
@@ -28,7 +27,9 @@ const shopService = {
 
     canBuyItem(itemId) {
         const item =
-            this.getItemById(itemId)
+            this.getItemById(
+                itemId
+            )
 
         if (!item) {
             return {
@@ -41,17 +42,28 @@ const shopService = {
             playerService.getPlayer()
 
         const currentCoins =
-            typeof player.coins === "number"
+            typeof player.coins ===
+            "number"
                 ? player.coins
                 : 0
 
-        if (currentCoins < item.price) {
+        if (
+            currentCoins <
+            item.price
+        ) {
             return {
                 success: false,
-                reason: "not-enough-coins",
+                reason:
+                    "not-enough-coins",
+
                 item,
-                required: item.price,
-                current: currentCoins,
+
+                required:
+                    item.price,
+
+                current:
+                    currentCoins,
+
                 missing:
                     item.price -
                     currentCoins
@@ -66,7 +78,9 @@ const shopService = {
 
     buyItem(itemId) {
         const validation =
-            this.canBuyItem(itemId)
+            this.canBuyItem(
+                itemId
+            )
 
         if (!validation.success) {
             return validation
@@ -79,7 +93,8 @@ const shopService = {
             playerService.getPlayer()
 
         const currentCoins =
-            typeof player.coins === "number"
+            typeof player.coins ===
+            "number"
                 ? player.coins
                 : 0
 
@@ -96,7 +111,6 @@ const shopService = {
 
         return {
             success: true,
-
             item,
 
             quantity:
@@ -109,21 +123,25 @@ const shopService = {
         }
     },
 
-    /*
-     * =========================
-     * INVENTÁRIO
-     * =========================
-     */
-
     getOwnedQuantity(itemId) {
-        return playerService.getItemQuantity(
-            itemId
+        return (
+            playerService.getItemQuantity(
+                itemId
+            )
         )
     },
 
+    /*
+     * =========================
+     * POÇÕES DE VIDA
+     * =========================
+     */
+
     canUseItem(itemId) {
         const item =
-            this.getItemById(itemId)
+            this.getItemById(
+                itemId
+            )
 
         if (!item) {
             return {
@@ -132,59 +150,47 @@ const shopService = {
             }
         }
 
-        const quantity =
-            this.getOwnedQuantity(
+        if (
+            playerService.getItemQuantity(
                 itemId
-            )
-
-        if (quantity <= 0) {
+            ) <= 0
+        ) {
             return {
                 success: false,
-                reason: "item-not-owned",
-                item
+                reason: "item-not-owned"
             }
         }
 
-        /*
-         * Nesta primeira versão,
-         * apenas consumíveis de cura
-         * podem ser usados.
-         */
-        const isHealthItem =
-            typeof item.effect?.health ===
-                "number" ||
-            item.effect?.fullHealth === true
-
-        if (!isHealthItem) {
+        if (
+            !item.effect?.health &&
+            !item.effect?.fullHealth
+        ) {
             return {
                 success: false,
-                reason: "effect-not-implemented",
-                item
+                reason:
+                    "effect-not-implemented"
             }
         }
 
         const player =
             playerService.getPlayer()
 
-        const currentHealth =
-            typeof player.health === "number"
-                ? player.health
-                : 100
-
         const maxHealth =
-            typeof player.maxHealth === "number"
-                ? player.maxHealth
-                : 100
+            player.maxHealth || 100
 
-        /*
-         * Não desperdiça uma poção
-         * quando o HP já está cheio.
-         */
-        if (currentHealth >= maxHealth) {
+        const currentHealth =
+            typeof player.health ===
+            "number"
+                ? player.health
+                : maxHealth
+
+        if (
+            currentHealth >= maxHealth
+        ) {
             return {
                 success: false,
-                reason: "health-already-full",
-                item
+                reason:
+                    "health-already-full"
             }
         }
 
@@ -196,7 +202,9 @@ const shopService = {
 
     useItem(itemId) {
         const validation =
-            this.canUseItem(itemId)
+            this.canUseItem(
+                itemId
+            )
 
         if (!validation.success) {
             return validation
@@ -208,81 +216,58 @@ const shopService = {
         const player =
             playerService.getPlayer()
 
-        const currentHealth =
-            typeof player.health === "number"
-                ? player.health
-                : 100
-
         const maxHealth =
-            typeof player.maxHealth === "number"
-                ? player.maxHealth
-                : 100
+            player.maxHealth || 100
 
-        let newHealth =
-            currentHealth
-
-        /*
-         * Elixir Vital:
-         * restaura completamente o HP.
-         */
-        if (
-            item.effect?.fullHealth === true
-        ) {
-            newHealth =
-                maxHealth
-        }
-
-        /*
-         * Poções normais:
-         * somam HP sem ultrapassar
-         * o máximo.
-         */
-        else if (
-            typeof item.effect?.health ===
+        const healthBefore =
+            typeof player.health ===
             "number"
+                ? player.health
+                : maxHealth
+
+        let healthAfter =
+            healthBefore
+
+        if (
+            item.effect?.fullHealth
         ) {
-            newHealth =
+            healthAfter =
+                maxHealth
+        } else if (
+            item.effect?.health
+        ) {
+            healthAfter =
                 Math.min(
                     maxHealth,
-                    currentHealth +
-                        item.effect.health
+                    healthBefore +
+                    item.effect.health
                 )
         }
 
-        /*
-         * Atualiza o jogador primeiro.
-         */
         playerService.updatePlayer({
-            health: newHealth
+            health:
+                healthAfter
         })
 
-        /*
-         * Remove uma unidade
-         * do inventário.
-         */
         playerService.removeItem(
-            item.id,
+            itemId,
             1
         )
 
         return {
             success: true,
-
             item,
 
-            healthBefore:
-                currentHealth,
-
-            healthAfter:
-                newHealth,
+            healthBefore,
+            healthAfter,
 
             healed:
-                newHealth -
-                currentHealth,
+                healthAfter -
+                healthBefore,
 
             quantity:
                 playerService.getItemQuantity(
-                    item.id
+                    itemId
                 ),
 
             player:
@@ -292,81 +277,195 @@ const shopService = {
 
     /*
      * =========================
-     * MENSAGENS DE COMPRA
+     * ITENS ESPECIAIS
      * =========================
      */
 
-    getPurchaseMessage(result) {
-        if (!result) {
-            return "Não foi possível realizar a compra."
+    getEffectKey(itemId) {
+        if (
+            itemId ===
+            "protectionAmulet"
+        ) {
+            return "protection"
         }
 
-        if (result.success) {
-            return `${result.item.name} comprado com sucesso!`
+        if (
+            itemId ===
+            "streakPotion"
+        ) {
+            return "streakProtection"
         }
 
-        switch (result.reason) {
-            case "item-not-found":
-                return "Este item não existe."
+        return null
+    },
 
-            case "not-enough-coins":
-                return (
-                    `Você precisa de mais ` +
-                    `${result.missing} moeda` +
-                    `${result.missing === 1 ? "" : "s"} ` +
-                    `para comprar este item.`
-                )
+    activateSpecialItem(
+        itemId,
+        targetType,
+        targetId,
+        targetTitle
+    ) {
+        const item =
+            this.getItemById(
+                itemId
+            )
 
-            default:
-                return "Não foi possível realizar a compra."
+        if (!item) {
+            return {
+                success: false,
+                reason: "item-not-found"
+            }
+        }
+
+        if (
+            playerService.getItemQuantity(
+                itemId
+            ) <= 0
+        ) {
+            return {
+                success: false,
+                reason: "item-not-owned"
+            }
+        }
+
+        const effectKey =
+            this.getEffectKey(
+                itemId
+            )
+
+        if (!effectKey) {
+            return {
+                success: false,
+                reason:
+                    "invalid-special-item"
+            }
+        }
+
+        if (
+            itemId ===
+            "protectionAmulet" &&
+            ![
+                "task",
+                "habit",
+                "daily"
+            ].includes(
+                targetType
+            )
+        ) {
+            return {
+                success: false,
+                reason:
+                    "invalid-target-type"
+            }
+        }
+
+        if (
+            itemId ===
+            "streakPotion" &&
+            targetType !== "daily"
+        ) {
+            return {
+                success: false,
+                reason:
+                    "invalid-target-type"
+            }
+        }
+
+        const currentEffect =
+            playerService.getActiveEffect(
+                effectKey
+            )
+
+        if (currentEffect) {
+            return {
+                success: false,
+                reason:
+                    "effect-already-active",
+
+                effect:
+                    currentEffect
+            }
+        }
+
+        const removed =
+            playerService.removeItem(
+                itemId,
+                1
+            )
+
+        if (!removed) {
+            return {
+                success: false,
+                reason:
+                    "item-not-owned"
+            }
+        }
+
+        const effect = {
+            itemId,
+            targetType,
+            targetId,
+            targetTitle:
+                targetTitle ||
+                "Missão",
+
+            activatedAt:
+                new Date()
+                    .toISOString()
+        }
+
+        playerService.setActiveEffect(
+            effectKey,
+            effect
+        )
+
+        return {
+            success: true,
+            item,
+            effect,
+            player:
+                playerService.getPlayer()
         }
     },
 
     /*
-     * =========================
-     * MENSAGENS DE USO
-     * =========================
+     * Cancela uma proteção antes que ela
+     * seja ativada e devolve o item.
      */
-
-    getUseMessage(result) {
-        if (!result) {
-            return "Não foi possível usar este item."
-        }
-
-        if (result.success) {
-            return (
-                `${result.item.name} usado! ` +
-                `Você recuperou ` +
-                `${result.healed} HP.`
+    cancelSpecialEffect(
+        effectKey
+    ) {
+        const effect =
+            playerService.getActiveEffect(
+                effectKey
             )
+
+        if (!effect) {
+            return {
+                success: false,
+                reason:
+                    "effect-not-found"
+            }
         }
 
-        switch (result.reason) {
-            case "item-not-found":
-                return "Este item não existe."
+        playerService.clearActiveEffect(
+            effectKey
+        )
 
-            case "item-not-owned":
-                return "Você não possui este item."
+        playerService.addItem(
+            effect.itemId,
+            1
+        )
 
-            case "health-already-full":
-                return "Seu HP já está cheio."
-
-            case "effect-not-implemented":
-                return (
-                    "O efeito deste item ainda " +
-                    "não está disponível."
-                )
-
-            default:
-                return "Não foi possível usar este item."
+        return {
+            success: true,
+            effect,
+            player:
+                playerService.getPlayer()
         }
     }
 }
 
-/*
- * TEMPORÁRIO:
- * permite testar pelo console.
- */
 if (typeof window !== "undefined") {
     window.shopService =
         shopService

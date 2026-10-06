@@ -1,7 +1,19 @@
 <script setup>
-import { computed, ref } from "vue"
+import {
+    computed,
+    ref
+} from "vue"
+
+import InventoryItem from "./inventory/InventoryItem.vue"
+import ActiveEffects from "./inventory/ActiveEffects.vue"
+import SpecialItemModal from "./inventory/SpecialItemModal.vue"
+
 import { shopItems } from "../../data/shopItems"
+
 import shopService from "../../services/shopService"
+import taskService from "../../services/taskService"
+import habitService from "../../services/habitService"
+import dailyService from "../../services/dailyService"
 
 const props = defineProps({
     player: {
@@ -15,39 +27,112 @@ const emit = defineEmits([
 ])
 
 const message = ref("")
+const showSelector = ref(false)
+const selectedItem = ref(null)
 
-const inventoryItems = computed(() => {
-    const inventory =
-        props.player?.inventory || {}
+const inventoryItems =
+    computed(() => {
+        const inventory =
+            props.player?.inventory ||
+            {}
 
-    return Object.entries(inventory)
-        .filter(([, quantity]) => quantity > 0)
-        .map(([itemId, quantity]) => {
-            const item = shopItems[itemId]
-
-            if (!item) return null
-
-            return {
-                ...item,
-                quantity
-            }
-        })
-        .filter(Boolean)
-})
-
-function canUse(item) {
-    return (
-        item.type === "consumable" &&
-        (
-            item.effect?.health ||
-            item.effect?.fullHealth
+        return Object.entries(
+            inventory
         )
-    )
+            .filter(
+                ([, quantity]) =>
+                    quantity > 0
+            )
+            .map(
+                ([itemId, quantity]) => {
+                    const item =
+                        shopItems[itemId]
+
+                    if (!item) {
+                        return null
+                    }
+
+                    return {
+                        ...item,
+                        quantity
+                    }
+                }
+            )
+            .filter(Boolean)
+    })
+
+const activeEffects =
+    computed(() => {
+        return (
+            props.player
+                ?.activeEffects ||
+            {}
+        )
+    })
+
+const targetsByType =
+    computed(() => {
+        return {
+            task:
+                taskService
+                    .getTasks()
+                    .filter(
+                        task =>
+                            !task.completed &&
+                            !task.failed
+                    )
+                    .map(task => ({
+                        id: task.id,
+                        title: task.title
+                    })),
+
+            habit:
+                habitService
+                    .getHabits()
+                    .map(habit => ({
+                        id: habit.id,
+                        title:
+                            habit.title ||
+                            habit.name ||
+                            "Hábito"
+                    })),
+
+            daily:
+                dailyService
+                    .getDailies()
+                    .map(daily => ({
+                        id: daily.id,
+                        title:
+                            daily.title ||
+                            "Diária"
+                    }))
+        }
+    })
+
+function handleUse(item) {
+    if (
+        item.type ===
+        "consumable"
+    ) {
+        useConsumable(
+            item.id
+        )
+
+        return
+    }
+
+    selectedItem.value =
+        item
+
+    showSelector.value =
+        true
 }
 
-function useItem(itemId) {
+function useConsumable(itemId) {
     const result =
-        shopService.useItem(itemId)
+        shopService.useItem(
+            itemId
+        )
 
     if (!result.success) {
         if (
@@ -56,12 +141,6 @@ function useItem(itemId) {
         ) {
             message.value =
                 "Sua vida já está cheia."
-        } else if (
-            result.reason ===
-            "item-not-owned"
-        ) {
-            message.value =
-                "Você não possui esse item."
         } else {
             message.value =
                 "Não foi possível usar o item."
@@ -73,7 +152,83 @@ function useItem(itemId) {
     message.value =
         `${result.item.name} usado! +${result.healed} HP`
 
-    emit("inventory-updated")
+    emit(
+        "inventory-updated"
+    )
+}
+
+function activateSpecialItem(
+    selection
+) {
+    const result =
+        shopService
+            .activateSpecialItem(
+                selection.itemId,
+                selection.targetType,
+                selection.targetId,
+                selection.targetTitle
+            )
+
+    if (!result.success) {
+        if (
+            result.reason ===
+            "effect-already-active"
+        ) {
+            message.value =
+                "Você já possui uma proteção desse tipo ativa."
+        } else {
+            message.value =
+                "Não foi possível ativar o item."
+        }
+
+        return
+    }
+
+    if (
+        selection.itemId ===
+        "protectionAmulet"
+    ) {
+        message.value =
+            `Amuleto protegendo: ${selection.targetTitle}.`
+    } else {
+        message.value =
+            `Sequência protegida: ${selection.targetTitle}.`
+    }
+
+    closeSelector()
+
+    emit(
+        "inventory-updated"
+    )
+}
+
+function cancelEffect(
+    effectKey
+) {
+    const result =
+        shopService
+            .cancelSpecialEffect(
+                effectKey
+            )
+
+    if (!result.success) {
+        return
+    }
+
+    message.value =
+        "Proteção cancelada. O item voltou para sua mochila."
+
+    emit(
+        "inventory-updated"
+    )
+}
+
+function closeSelector() {
+    showSelector.value =
+        false
+
+    selectedItem.value =
+        null
 }
 </script>
 
@@ -102,64 +257,30 @@ function useItem(itemId) {
             {{ message }}
         </div>
 
+        <ActiveEffects
+            :active-effects="activeEffects"
+            @cancel="cancelEffect"
+        />
+
         <div
             v-if="inventoryItems.length"
             class="inventory-list"
         >
-            <article
+            <InventoryItem
                 v-for="item in inventoryItems"
                 :key="item.id"
-                class="inventory-item"
-            >
-                <div class="item-image-box">
-                    <img
-                        :src="item.image"
-                        :alt="item.name"
-                    />
-
-                    <span class="quantity">
-                        ×{{ item.quantity }}
-                    </span>
-                </div>
-
-                <div class="item-info">
-                    <strong>
-                        {{ item.name }}
-                    </strong>
-
-                    <span>
-                        {{
-                            item.type ===
-                            "consumable"
-                                ? "Consumível"
-                                : "Especial"
-                        }}
-                    </span>
-                </div>
-
-                <button
-                    v-if="canUse(item)"
-                    type="button"
-                    class="use-button"
-                    @click="useItem(item.id)"
-                >
-                    USAR
-                </button>
-
-                <span
-                    v-else
-                    class="passive"
-                >
-                    PASSIVO
-                </span>
-            </article>
+                :item="item"
+                @use="handleUse"
+            />
         </div>
 
         <div
             v-else
             class="empty-inventory"
         >
-            <span>🎒</span>
+            <span>
+                🎒
+            </span>
 
             <p>
                 Sua mochila está vazia.
@@ -169,6 +290,14 @@ function useItem(itemId) {
                 Visite a loja para conseguir itens.
             </small>
         </div>
+
+        <SpecialItemModal
+            :show="showSelector"
+            :item="selectedItem"
+            :targets-by-type="targetsByType"
+            @close="closeSelector"
+            @confirm="activateSpecialItem"
+        />
     </section>
 </template>
 
@@ -211,14 +340,19 @@ function useItem(itemId) {
     border: 1px solid #4b3c60;
     border-radius: 50%;
     font-size: 10px;
-    font-weight: 700;
 }
 
 .message {
     margin-bottom: 14px;
     padding: 9px 11px;
     color: #c9b1df;
-    background: rgba(139, 73, 209, 0.1);
+    background:
+        rgba(
+            139,
+            73,
+            209,
+            0.1
+        );
     border: 1px solid #684090;
     border-radius: 7px;
     font-size: 10px;
@@ -228,97 +362,6 @@ function useItem(itemId) {
     display: flex;
     flex-direction: column;
     gap: 10px;
-}
-
-.inventory-item {
-    display: grid;
-    grid-template-columns: 52px minmax(0, 1fr) auto;
-    align-items: center;
-    gap: 11px;
-    padding: 10px;
-    background: #101927;
-    border: 1px solid #2d394d;
-    border-radius: 9px;
-}
-
-.item-image-box {
-    width: 52px;
-    height: 52px;
-    position: relative;
-    display: grid;
-    place-items: center;
-    overflow: hidden;
-    background: #0c1421;
-    border-radius: 8px;
-}
-
-.item-image-box img {
-    width: 100%;
-    height: 100%;
-    padding: 3px;
-    object-fit: contain;
-}
-
-.quantity {
-    position: absolute;
-    right: 3px;
-    bottom: 3px;
-    min-width: 18px;
-    padding: 2px 4px;
-    color: white;
-    background: rgba(8, 13, 22, 0.85);
-    border-radius: 5px;
-    font-size: 8px;
-    text-align: center;
-}
-
-.item-info {
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
-}
-
-.item-info strong {
-    overflow: hidden;
-    color: #e8edf5;
-    font-size: 11px;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.item-info span {
-    color: #748398;
-    font-size: 8px;
-    text-transform: uppercase;
-    letter-spacing: 0.7px;
-}
-
-.use-button {
-    padding: 7px 9px;
-    color: white;
-    background: linear-gradient(
-        90deg,
-        #7227dc,
-        #a928ef
-    );
-    border: 1px solid #9f54e6;
-    border-radius: 6px;
-    font-family: inherit;
-    font-size: 8px;
-    font-weight: 700;
-    cursor: pointer;
-}
-
-.use-button:hover {
-    transform: translateY(-1px);
-}
-
-.passive {
-    color: #6f7e94;
-    font-size: 7px;
-    font-weight: 700;
-    letter-spacing: 0.8px;
 }
 
 .empty-inventory {
