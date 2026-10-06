@@ -2,226 +2,33 @@ import storageService from "./storageService"
 
 const DAILIES_KEY = "dailies"
 
-const dayNames = [
-    "sunday",
-    "monday",
-    "tuesday",
-    "wednesday",
-    "thursday",
-    "friday",
-    "saturday"
-]
-
-/*
- * Retorna uma data no formato YYYY-MM-DD
- * usando a data LOCAL.
- */
-function getLocalDateKey(date = new Date()) {
-    const year = date.getFullYear()
-
-    const month = String(
-        date.getMonth() + 1
-    ).padStart(2, "0")
-
-    const day = String(
-        date.getDate()
-    ).padStart(2, "0")
-
-    return `${year}-${month}-${day}`
-}
-
-/*
- * Converte YYYY-MM-DD para Date local.
- *
- * Evitamos:
- *
- * new Date("2026-10-04")
- *
- * porque strings nesse formato podem ser
- * interpretadas como UTC e causar diferenças
- * de data dependendo do fuso horário.
- */
-function parseLocalDate(dateString) {
-    if (!dateString) {
-        return null
-    }
-
-    const [
-        year,
-        month,
-        day
-    ] = dateString
-        .split("-")
-        .map(Number)
-
-    if (
-        !year ||
-        !month ||
-        !day
-    ) {
-        return null
-    }
-
-    return new Date(
-        year,
-        month - 1,
-        day
-    )
-}
-
-/*
- * Cria uma cópia da data usando meio-dia.
- *
- * Isso ajuda a evitar problemas de cálculo
- * relacionados a alterações de horário.
- */
-function normalizeDate(date) {
-    return new Date(
-        date.getFullYear(),
-        date.getMonth(),
-        date.getDate(),
-        12,
-        0,
-        0,
-        0
-    )
-}
-
-/*
- * Descobre o início da semana da data.
- *
- * Neste projeto consideramos:
- *
- * segunda = início da semana
- * domingo = final da semana
- */
-function getStartOfWeek(date) {
-    const normalized =
-        normalizeDate(date)
-
-    const day =
-        normalized.getDay()
-
-    /*
-     * JavaScript:
-     *
-     * domingo = 0
-     * segunda = 1
-     * ...
-     * sábado = 6
-     *
-     * Transformamos para:
-     *
-     * segunda = 0
-     * terça = 1
-     * ...
-     * domingo = 6
-     */
-    const daysSinceMonday =
-        (day + 6) % 7
-
-    normalized.setDate(
-        normalized.getDate() -
-        daysSinceMonday
-    )
-
-    return normalized
-}
-
-/*
- * Calcula quantas semanas existem
- * entre duas datas.
- *
- * O cálculo é feito usando o começo
- * de cada semana.
- */
-function getWeeksBetween(
-    startDate,
-    currentDate
-) {
-    const startWeek =
-        getStartOfWeek(startDate)
-
-    const currentWeek =
-        getStartOfWeek(currentDate)
-
-    const millisecondsPerWeek =
-        7 * 24 * 60 * 60 * 1000
-
-    return Math.floor(
-        (
-            currentWeek.getTime() -
-            startWeek.getTime()
-        ) /
-        millisecondsPerWeek
-    )
-}
-
 const dailyService = {
-    /*
-     * =========================
-     * BUSCA
-     * =========================
-     */
-
     getDailies() {
-        return (
-            storageService.get(
-                DAILIES_KEY
-            ) || []
-        )
+        return storageService.get(DAILIES_KEY) || []
     },
 
     getDailyById(dailyId) {
-        return this
-            .getDailies()
-            .find(
-                daily =>
-                    daily.id === dailyId
-            )
+        return this.getDailies().find(
+            daily => daily.id === dailyId
+        )
     },
 
-    /*
-     * =========================
-     * CRUD
-     * =========================
-     */
-
     addDaily(daily) {
-        const dailies =
-            this.getDailies()
+        const dailies = this.getDailies()
 
         const newDaily = {
             ...daily,
-
-            id: crypto.randomUUID(),
-
-            /*
-             * Histórico.
-             */
-            completedDates: [],
-            failedDates: [],
-
-            /*
-             * Sequências.
-             */
-            streak: 0,
-            bestStreak: 0,
-
-            /*
-             * Garantimos que a repetição
-             * nunca seja menor que 1.
-             */
-            repeatEvery:
-                Math.max(
-                    1,
-                    Number(
-                        daily.repeatEvery
-                    ) || 1
-                ),
-
-            createdAt:
-                new Date().toISOString()
+            id: daily.id || crypto.randomUUID(),
+            title: daily.title || "",
+            description: daily.description || "",
+            difficulty: daily.difficulty || "easy",
+            startDate: daily.startDate || null,
+            repeatEvery: daily.repeatEvery || 1,
+            daysOfWeek: daily.daysOfWeek || [],
+            completedDates: daily.completedDates || [],
+            failedDates: daily.failedDates || [],
+            streak: daily.streak || 0,
+            bestStreak: daily.bestStreak || 0
         }
 
         dailies.push(newDaily)
@@ -234,18 +41,12 @@ const dailyService = {
         return newDaily
     },
 
-    updateDaily(
-        dailyId,
-        updatedData
-    ) {
-        const dailies =
-            this.getDailies()
+    updateDaily(dailyId, updatedData) {
+        const dailies = this.getDailies()
 
         const updatedDailies =
             dailies.map(daily => {
-                if (
-                    daily.id === dailyId
-                ) {
+                if (daily.id === dailyId) {
                     return {
                         ...daily,
                         ...updatedData
@@ -266,14 +67,14 @@ const dailyService = {
     },
 
     removeDaily(dailyId) {
+        const dailies =
+            this.getDailies()
+
         const updatedDailies =
-            this
-                .getDailies()
-                .filter(
-                    daily =>
-                        daily.id !==
-                        dailyId
-                )
+            dailies.filter(
+                daily =>
+                    daily.id !== dailyId
+            )
 
         storageService.save(
             DAILIES_KEY,
@@ -285,221 +86,128 @@ const dailyService = {
 
     /*
      * =========================
-     * AGENDAMENTO
+     * DATAS
+     * =========================
+     */
+
+    getTodayKey() {
+        const today = new Date()
+
+        const year =
+            today.getFullYear()
+
+        const month =
+            String(
+                today.getMonth() + 1
+            ).padStart(2, "0")
+
+        const day =
+            String(
+                today.getDate()
+            ).padStart(2, "0")
+
+        return `${year}-${month}-${day}`
+    },
+
+    getTodayName() {
+        const days = [
+            "sunday",
+            "monday",
+            "tuesday",
+            "wednesday",
+            "thursday",
+            "friday",
+            "saturday"
+        ]
+
+        return days[
+            new Date().getDay()
+        ]
+    },
+
+    /*
+     * =========================
+     * AGENDA
      * =========================
      */
 
     isScheduledToday(daily) {
-        const today =
-            new Date()
+        if (!daily) {
+            return false
+        }
 
-        return this.isScheduledOnDate(
-            daily,
-            today
-        )
-    },
-
-    /*
-     * Verifica se uma diária deveria
-     * acontecer em uma data específica.
-     *
-     * Esta função também será útil
-     * posteriormente para detectar
-     * diárias perdidas automaticamente.
-     */
-    isScheduledOnDate(
-        daily,
-        date
-    ) {
-        const currentDate =
-            normalizeDate(date)
-
-        const currentDateKey =
-            getLocalDateKey(
-                currentDate
-            )
-
-        /*
-         * =========================
-         * 1. DATA DE INÍCIO
-         * =========================
-         */
+        const todayKey =
+            this.getTodayKey()
 
         if (
             daily.startDate &&
-            currentDateKey <
-                daily.startDate
+            todayKey < daily.startDate
         ) {
             return false
         }
 
-        /*
-         * =========================
-         * 2. DIA DA SEMANA
-         * =========================
-         */
-
-        const currentDayName =
-            dayNames[
-                currentDate.getDay()
-            ]
-
-        const days =
+        const daysOfWeek =
             daily.daysOfWeek || []
 
         /*
-         * Compatibilidade com
-         * diárias antigas.
-         *
-         * Se não existem dias salvos,
-         * consideramos todos os dias.
+         * Compatibilidade:
+         * diárias antigas sem dias definidos
+         * continuam válidas todos os dias.
          */
-        const matchesWeekday =
-            days.length === 0 ||
-            days.includes(
-                currentDayName
-            )
-
-        if (!matchesWeekday) {
-            return false
-        }
-
-        /*
-         * =========================
-         * 3. INTERVALO DE SEMANAS
-         * =========================
-         */
-
-        const repeatEvery =
-            Math.max(
-                1,
-                Number(
-                    daily.repeatEvery
-                ) || 1
-            )
-
-        /*
-         * A cada 1 semana significa
-         * que todas as semanas são
-         * válidas.
-         */
-        if (repeatEvery === 1) {
+        if (daysOfWeek.length === 0) {
             return true
         }
 
-        /*
-         * Diárias antigas podem não
-         * possuir startDate.
-         *
-         * Nesse caso não temos uma
-         * referência para calcular
-         * semanas alternadas.
-         */
-        if (!daily.startDate) {
-            return true
-        }
+        const todayName =
+            this.getTodayName()
 
-        const startDate =
-            parseLocalDate(
-                daily.startDate
-            )
-
-        if (!startDate) {
-            return true
-        }
-
-        const weeksSinceStart =
-            getWeeksBetween(
-                startDate,
-                currentDate
-            )
-
-        /*
-         * Segurança adicional.
-         */
-        if (weeksSinceStart < 0) {
-            return false
-        }
-
-        /*
-         * Exemplo repeatEvery = 3:
-         *
-         * semana 0 → 0 % 3 = 0 ✓
-         * semana 1 → 1 % 3 = 1 ✕
-         * semana 2 → 2 % 3 = 2 ✕
-         * semana 3 → 3 % 3 = 0 ✓
-         */
-        return (
-            weeksSinceStart %
-                repeatEvery ===
-            0
+        return daysOfWeek.includes(
+            todayName
         )
     },
 
     /*
      * =========================
-     * ESTADO DE UMA DATA
-     * =========================
-     */
-
-    isCompletedOnDate(
-        daily,
-        date
-    ) {
-        const dateKey =
-            getLocalDateKey(date)
-
-        return (
-            daily.completedDates || []
-        ).includes(dateKey)
-    },
-
-    isFailedOnDate(
-        daily,
-        date
-    ) {
-        const dateKey =
-            getLocalDateKey(date)
-
-        return (
-            daily.failedDates || []
-        ).includes(dateKey)
-    },
-
-    /*
-     * =========================
-     * ESTADO DE HOJE
+     * ESTADO DO DIA
      * =========================
      */
 
     isCompletedToday(daily) {
-        return this.isCompletedOnDate(
-            daily,
-            new Date()
-        )
+        if (!daily) {
+            return false
+        }
+
+        const today =
+            this.getTodayKey()
+
+        return (
+            daily.completedDates || []
+        ).includes(today)
     },
 
     isFailedToday(daily) {
-        return this.isFailedOnDate(
-            daily,
-            new Date()
-        )
+        if (!daily) {
+            return false
+        }
+
+        const today =
+            this.getTodayKey()
+
+        return (
+            daily.failedDates || []
+        ).includes(today)
     },
 
     isFinishedToday(daily) {
         return (
-            this.isCompletedToday(
-                daily
-            ) ||
-            this.isFailedToday(
-                daily
-            )
+            this.isCompletedToday(daily) ||
+            this.isFailedToday(daily)
         )
     },
 
     /*
      * =========================
-     * VALIDAÇÃO DE CONCLUSÃO
+     * VALIDAÇÃO
      * =========================
      */
 
@@ -511,9 +219,8 @@ const dailyService = {
 
         if (!daily) {
             return {
-                success: false,
-                reason:
-                    "daily-not-found"
+                allowed: false,
+                reason: "not-found"
             }
         }
 
@@ -523,7 +230,7 @@ const dailyService = {
             )
         ) {
             return {
-                success: false,
+                allowed: false,
                 reason:
                     "not-scheduled-today"
             }
@@ -535,7 +242,7 @@ const dailyService = {
             )
         ) {
             return {
-                success: false,
+                allowed: false,
                 reason:
                     "already-completed-today"
             }
@@ -547,59 +254,115 @@ const dailyService = {
             )
         ) {
             return {
-                success: false,
+                allowed: false,
                 reason:
                     "already-failed-today"
             }
         }
 
         return {
-            success: true
+            allowed: true
         }
     },
 
-    /*
-     * =========================
-     * CONCLUIR
-     * =========================
-     */
-
-    completeDaily(dailyId) {
-        const validation =
-            this.canCompleteToday(
-                dailyId
-            )
-
-        if (!validation.success) {
-            return validation
-        }
-
+    canFailToday(dailyId) {
         const daily =
             this.getDailyById(
                 dailyId
             )
 
-        const today =
-            getLocalDateKey()
+        if (!daily) {
+            return {
+                allowed: false,
+                reason: "not-found"
+            }
+        }
 
-        /*
-         * Set evita qualquer
-         * duplicação acidental.
-         */
+        if (
+            !this.isScheduledToday(
+                daily
+            )
+        ) {
+            return {
+                allowed: false,
+                reason:
+                    "not-scheduled-today"
+            }
+        }
+
+        if (
+            this.isCompletedToday(
+                daily
+            )
+        ) {
+            return {
+                allowed: false,
+                reason:
+                    "already-completed-today"
+            }
+        }
+
+        if (
+            this.isFailedToday(
+                daily
+            )
+        ) {
+            return {
+                allowed: false,
+                reason:
+                    "already-failed-today"
+            }
+        }
+
+        return {
+            allowed: true
+        }
+    },
+
+    /*
+     * =========================
+     * CONCLUIR DIÁRIA
+     * =========================
+     */
+
+    completeDaily(dailyId) {
+        const daily =
+            this.getDailyById(
+                dailyId
+            )
+
+        if (!daily) {
+            return {
+                success: false,
+                reason: "not-found"
+            }
+        }
+
+        const permission =
+            this.canCompleteToday(
+                dailyId
+            )
+
+        if (!permission.allowed) {
+            return {
+                success: false,
+                reason:
+                    permission.reason
+            }
+        }
+
+        const today =
+            this.getTodayKey()
+
         const completedDates = [
-            ...new Set([
-                ...(
-                    daily.completedDates ||
-                    []
-                ),
-                today
-            ])
+            ...(daily.completedDates || []),
+            today
         ]
 
         const newStreak =
             (daily.streak || 0) + 1
 
-        const bestStreak =
+        const newBestStreak =
             Math.max(
                 daily.bestStreak || 0,
                 newStreak
@@ -610,28 +373,26 @@ const dailyService = {
                 dailyId,
                 {
                     completedDates,
-
                     streak:
                         newStreak,
-
-                    bestStreak
+                    bestStreak:
+                        newBestStreak
                 }
             )
 
         return {
             success: true,
-            daily:
-                updatedDaily
+            daily: updatedDaily
         }
     },
 
     /*
      * =========================
-     * VALIDAÇÃO DE FALHA
+     * FALHAR DIÁRIA
      * =========================
      */
 
-    canFailToday(dailyId) {
+    failDaily(dailyId) {
         const daily =
             this.getDailyById(
                 dailyId
@@ -640,90 +401,31 @@ const dailyService = {
         if (!daily) {
             return {
                 success: false,
-                reason:
-                    "daily-not-found"
+                reason: "not-found"
             }
         }
 
-        if (
-            !this.isScheduledToday(
-                daily
-            )
-        ) {
-            return {
-                success: false,
-                reason:
-                    "not-scheduled-today"
-            }
-        }
-
-        if (
-            this.isCompletedToday(
-                daily
-            )
-        ) {
-            return {
-                success: false,
-                reason:
-                    "already-completed-today"
-            }
-        }
-
-        if (
-            this.isFailedToday(
-                daily
-            )
-        ) {
-            return {
-                success: false,
-                reason:
-                    "already-failed-today"
-            }
-        }
-
-        return {
-            success: true
-        }
-    },
-
-    /*
-     * =========================
-     * FALHAR
-     * =========================
-     */
-
-    failDaily(dailyId) {
-        const validation =
+        const permission =
             this.canFailToday(
                 dailyId
             )
 
-        if (!validation.success) {
-            return validation
+        if (!permission.allowed) {
+            return {
+                success: false,
+                reason:
+                    permission.reason
+            }
         }
 
-        const daily =
-            this.getDailyById(
-                dailyId
-            )
-
         const today =
-            getLocalDateKey()
+            this.getTodayKey()
 
         const failedDates = [
-            ...new Set([
-                ...(
-                    daily.failedDates ||
-                    []
-                ),
-                today
-            ])
+            ...(daily.failedDates || []),
+            today
         ]
 
-        /*
-         * Falhar quebra a sequência
-         * atual, mas preserva o recorde.
-         */
         const updatedDaily =
             this.updateDaily(
                 dailyId,
@@ -735,10 +437,20 @@ const dailyService = {
 
         return {
             success: true,
-            daily:
-                updatedDaily
+            daily: updatedDaily
         }
     }
+}
+
+/*
+ * TEMPORÁRIO:
+ * permite testar o serviço
+ * no console do navegador.
+ */
+
+if (typeof window !== "undefined") {
+    window.dailyService =
+        dailyService
 }
 
 export default dailyService

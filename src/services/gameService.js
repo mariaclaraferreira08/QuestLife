@@ -5,11 +5,10 @@ import dailyService from "./dailyService"
 
 import { difficulties } from "../data/difficulties"
 
-const PROTECTION_ITEM_ID =
-    "protectionAmulet"
+const PROTECTION_ITEM_ID = "protectionAmulet"
+const STREAK_ITEM_ID = "streakPotion"
 
-const PROTECTION_PERCENTAGE =
-    0.5
+const PROTECTION_PERCENTAGE = 0.5
 
 const gameService = {
     getDifficulty(difficulty) {
@@ -23,8 +22,7 @@ const gameService = {
      */
 
     addXP(amount) {
-        const player =
-            playerService.getPlayer()
+        const player = playerService.getPlayer()
 
         const newXP =
             (player.xp || 0) + amount
@@ -89,7 +87,7 @@ const gameService = {
 
     /*
      * =========================
-     * PROTEÇÃO
+     * AMULETO DE PROTEÇÃO
      * =========================
      */
 
@@ -110,13 +108,6 @@ const gameService = {
             }
         }
 
-        /*
-         * O amuleto reduz 50%
-         * do próximo dano.
-         *
-         * Math.ceil impede que um dano
-         * pequeno vire zero.
-         */
         const finalDamage =
             Math.ceil(
                 amount *
@@ -140,9 +131,7 @@ const gameService = {
                 : 100
 
         const damage =
-            this.calculateDamage(
-                amount
-            )
+            this.calculateDamage(amount)
 
         const newHealth =
             Math.max(
@@ -151,17 +140,10 @@ const gameService = {
                 damage.finalDamage
             )
 
-        /*
-         * Atualiza a vida primeiro.
-         */
         playerService.updatePlayer({
             health: newHealth
         })
 
-        /*
-         * Se houve proteção,
-         * o amuleto é consumido.
-         */
         if (damage.protected) {
             playerService.removeItem(
                 PROTECTION_ITEM_ID,
@@ -182,6 +164,27 @@ const gameService = {
             protected:
                 damage.protected
         }
+    },
+
+    /*
+     * =========================
+     * ELIXIR DA PERSISTÊNCIA
+     * =========================
+     */
+
+    hasStreakPotion() {
+        return (
+            playerService.getItemQuantity(
+                STREAK_ITEM_ID
+            ) > 0
+        )
+    },
+
+    consumeStreakPotion() {
+        return playerService.removeItem(
+            STREAK_ITEM_ID,
+            1
+        )
     },
 
     /*
@@ -500,6 +503,13 @@ const gameService = {
             }
         }
 
+        const previousStreak =
+            daily.streak || 0
+
+        const hasStreakProtection =
+            previousStreak > 0 &&
+            this.hasStreakPotion()
+
         const result =
             dailyService.failDaily(
                 dailyId
@@ -507,6 +517,27 @@ const gameService = {
 
         if (!result.success) {
             return result
+        }
+
+        let updatedDaily =
+            result.daily
+
+        let streakProtected =
+            false
+
+        if (hasStreakProtection) {
+            updatedDaily =
+                dailyService.updateDaily(
+                    dailyId,
+                    {
+                        streak:
+                            previousStreak
+                    }
+                )
+
+            this.consumeStreakPotion()
+
+            streakProtected = true
         }
 
         const punishment =
@@ -518,14 +549,16 @@ const gameService = {
             success: true,
 
             daily:
-                result.daily,
+                updatedDaily,
 
             player:
                 punishment?.player ||
                 punishment,
 
             damage:
-                punishment?.damage
+                punishment?.damage,
+
+            streakProtected
         }
     }
 }
@@ -534,6 +567,7 @@ const gameService = {
  * TEMPORÁRIO:
  * facilita os testes no console.
  */
+
 if (typeof window !== "undefined") {
     window.gameService =
         gameService
