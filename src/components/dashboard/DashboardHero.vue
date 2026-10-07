@@ -1,8 +1,25 @@
 <script setup>
+import { ref, onMounted } from "vue"
+
 defineProps({
     player: {
         type: Object,
         required: true
+    }
+})
+
+const isNewPlayer = ref(false)
+
+onMounted(() => {
+    isNewPlayer.value =
+        sessionStorage.getItem(
+            "questlife_new_account"
+        ) === "true"
+
+    if (isNewPlayer.value) {
+        sessionStorage.removeItem(
+            "questlife_new_account"
+        )
     }
 })
 </script>
@@ -11,8 +28,21 @@ defineProps({
     <section class="dashboard-hero">
         <div class="hero-content">
             <span class="eyebrow">
-                QUE BOM TER VOCÊ DE VOLTA,
-                {{ player.name?.toUpperCase() || "AVENTUREIRO" }}!
+                <template v-if="isNewPlayer">
+                    BEM-VINDO AO QUESTLIFE,
+                    {{
+                        player.name?.toUpperCase() ||
+                        "AVENTUREIRO"
+                    }}!
+                </template>
+
+                <template v-else>
+                    QUE BOM TER VOCÊ DE VOLTA,
+                    {{
+                        player.name?.toUpperCase() ||
+                        "AVENTUREIRO"
+                    }}!
+                </template>
             </span>
 
             <h1>
@@ -20,8 +50,17 @@ defineProps({
             </h1>
 
             <p>
-                Organize o que precisa fazer,
-                complete suas missões e continue evoluindo.
+                <template v-if="isNewPlayer">
+                    Sua jornada começa agora.
+                    Crie suas primeiras missões e
+                    comece a evoluir.
+                </template>
+
+                <template v-else>
+                    Organize o que precisa fazer,
+                    complete suas missões e continue
+                    evoluindo.
+                </template>
             </p>
         </div>
 

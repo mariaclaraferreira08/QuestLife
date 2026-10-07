@@ -12,6 +12,8 @@ const password = ref("")
 const message = ref("")
 const loading = ref(false)
 
+const showPassword = ref(false)
+
 async function login() {
     message.value = ""
 
@@ -34,6 +36,7 @@ async function login() {
         }
 
         playerService.loadCurrentPlayer()
+
         router.push("/")
     } finally {
         loading.value = false
@@ -99,13 +102,45 @@ async function login() {
                         SENHA
                     </span>
 
-                    <input
-                        v-model="password"
-                        type="password"
-                        autocomplete="current-password"
-                        placeholder="Digite sua senha"
-                        required
-                    />
+                    <div class="password-field">
+                        <input
+                            v-model="password"
+                            :type="
+                                showPassword
+                                    ? 'text'
+                                    : 'password'
+                            "
+                            autocomplete="current-password"
+                            placeholder="Digite sua senha"
+                            required
+                        />
+
+                        <button
+                            v-if="password"
+                            type="button"
+                            class="password-toggle"
+                            :aria-label="
+                                showPassword
+                                    ? 'Ocultar senha'
+                                    : 'Mostrar senha'
+                            "
+                            :title="
+                                showPassword
+                                    ? 'Ocultar senha'
+                                    : 'Mostrar senha'
+                            "
+                            @click="
+                                showPassword =
+                                    !showPassword
+                            "
+                        >
+                            {{
+                                showPassword
+                                    ? "◉"
+                                    : "◌"
+                            }}
+                        </button>
+                    </div>
                 </label>
 
                 <p
@@ -168,7 +203,9 @@ async function login() {
     background: #131d2d;
     border: 1px solid #354158;
     border-radius: 18px;
-    box-shadow: 0 24px 70px rgba(0, 0, 0, 0.28);
+    box-shadow:
+        0 24px 70px
+        rgba(0, 0, 0, 0.28);
 }
 
 .brand {
@@ -184,7 +221,12 @@ async function login() {
     display: grid;
     place-items: center;
     color: white;
-    background: linear-gradient(135deg, #7d3fd3, #b25aea);
+    background:
+        linear-gradient(
+            135deg,
+            #7d3fd3,
+            #b25aea
+        );
     border-radius: 12px;
     font-size: 20px;
     font-weight: 900;
@@ -259,14 +301,62 @@ async function login() {
 
 .auth-form input:focus {
     border-color: #8c4bd0;
-    box-shadow: 0 0 0 3px rgba(140, 75, 208, 0.1);
+    box-shadow:
+        0 0 0 3px
+        rgba(140, 75, 208, 0.1);
+}
+
+.password-field {
+    position: relative;
+}
+
+.password-field input {
+    padding-right: 48px;
+}
+
+.password-toggle {
+    position: absolute;
+    top: 50%;
+    right: 10px;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    display: grid;
+    place-items: center;
+    color: #9da9ba;
+    background: transparent;
+    border: 0;
+    border-radius: 7px;
+    transform: translateY(-50%);
+    cursor: pointer;
+    font-size: 18px;
+    transition:
+        color 0.2s,
+        background 0.2s;
+}
+
+.password-toggle:hover {
+    color: #d1a2ff;
+    background:
+        rgba(
+            169,
+            87,
+            230,
+            0.08
+        );
 }
 
 .message {
     margin: 0;
     padding: 10px 12px;
     color: #ff91a3;
-    background: rgba(255, 97, 122, 0.07);
+    background:
+        rgba(
+            255,
+            97,
+            122,
+            0.07
+        );
     border: 1px solid #6c3948;
     border-radius: 8px;
     font-size: 11px;
@@ -275,7 +365,12 @@ async function login() {
 .primary-button {
     min-height: 45px;
     color: white;
-    background: linear-gradient(135deg, #7431be, #a34cdd);
+    background:
+        linear-gradient(
+            135deg,
+            #7431be,
+            #a34cdd
+        );
     border: 0;
     border-radius: 9px;
     font-family: inherit;
@@ -307,10 +402,20 @@ async function login() {
     text-decoration: none;
 }
 
+.switch-auth a:hover {
+    text-decoration: underline;
+}
+
 footer {
     margin-top: 25px;
     color: #556176;
     text-align: center;
     font-size: 9px;
+}
+
+@media (max-width: 520px) {
+    .auth-card {
+        padding: 23px;
+    }
 }
 </style>

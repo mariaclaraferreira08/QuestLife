@@ -1,6 +1,9 @@
 <script setup>
 import { computed, ref } from "vue"
-import { RouterLink, useRouter } from "vue-router"
+import {
+    RouterLink,
+    useRouter
+} from "vue-router"
 
 import authService from "../services/authService"
 import playerService from "../services/playerService"
@@ -13,6 +16,9 @@ const password = ref("")
 const confirmPassword = ref("")
 const message = ref("")
 const loading = ref(false)
+
+const showPassword = ref(false)
+const showConfirmPassword = ref(false)
 
 const passwordRules = computed(() => {
     return authService.validatePassword(
@@ -56,7 +62,13 @@ async function register() {
             return
         }
 
+        sessionStorage.setItem(
+            "questlife_new_account",
+            "true"
+        )
+
         playerService.loadCurrentPlayer()
+
         router.push("/")
     } finally {
         loading.value = false
@@ -126,6 +138,7 @@ async function register() {
                         v-model="email"
                         type="email"
                         autocomplete="email"
+                        inputmode="email"
                         placeholder="seuemail@exemplo.com"
                         required
                     />
@@ -136,13 +149,45 @@ async function register() {
                         SENHA
                     </span>
 
-                    <input
-                        v-model="password"
-                        type="password"
-                        autocomplete="new-password"
-                        placeholder="Crie uma senha forte"
-                        required
-                    />
+                    <div class="password-field">
+                        <input
+                            v-model="password"
+                            :type="
+                                showPassword
+                                    ? 'text'
+                                    : 'password'
+                            "
+                            autocomplete="new-password"
+                            placeholder="Crie uma senha forte"
+                            required
+                        />
+
+                        <button
+                            v-if="password"
+                            type="button"
+                            class="password-toggle"
+                            :aria-label="
+                                showPassword
+                                    ? 'Ocultar senha'
+                                    : 'Mostrar senha'
+                            "
+                            :title="
+                                showPassword
+                                    ? 'Ocultar senha'
+                                    : 'Mostrar senha'
+                            "
+                            @click="
+                                showPassword =
+                                    !showPassword
+                            "
+                        >
+                            {{
+                                showPassword
+                                    ? "◉"
+                                    : "◌"
+                            }}
+                        </button>
+                    </div>
                 </label>
 
                 <div
@@ -225,13 +270,45 @@ async function register() {
                         CONFIRMAR SENHA
                     </span>
 
-                    <input
-                        v-model="confirmPassword"
-                        type="password"
-                        autocomplete="new-password"
-                        placeholder="Digite a senha novamente"
-                        required
-                    />
+                    <div class="password-field">
+                        <input
+                            v-model="confirmPassword"
+                            :type="
+                                showConfirmPassword
+                                    ? 'text'
+                                    : 'password'
+                            "
+                            autocomplete="new-password"
+                            placeholder="Digite a senha novamente"
+                            required
+                        />
+
+                        <button
+                            v-if="confirmPassword"
+                            type="button"
+                            class="password-toggle"
+                            :aria-label="
+                                showConfirmPassword
+                                    ? 'Ocultar senha'
+                                    : 'Mostrar senha'
+                            "
+                            :title="
+                                showConfirmPassword
+                                    ? 'Ocultar senha'
+                                    : 'Mostrar senha'
+                            "
+                            @click="
+                                showConfirmPassword =
+                                    !showConfirmPassword
+                            "
+                        >
+                            {{
+                                showConfirmPassword
+                                    ? "◉"
+                                    : "◌"
+                            }}
+                        </button>
+                    </div>
                 </label>
 
                 <span
@@ -304,7 +381,9 @@ async function register() {
     background: #131d2d;
     border: 1px solid #354158;
     border-radius: 18px;
-    box-shadow: 0 24px 70px rgba(0, 0, 0, 0.28);
+    box-shadow:
+        0 24px 70px
+        rgba(0, 0, 0, 0.28);
 }
 
 .brand {
@@ -320,7 +399,12 @@ async function register() {
     display: grid;
     place-items: center;
     color: white;
-    background: linear-gradient(135deg, #7d3fd3, #b25aea);
+    background:
+        linear-gradient(
+            135deg,
+            #7d3fd3,
+            #b25aea
+        );
     border-radius: 12px;
     font-size: 20px;
     font-weight: 900;
@@ -395,13 +479,56 @@ async function register() {
 
 .auth-form input:focus {
     border-color: #8c4bd0;
-    box-shadow: 0 0 0 3px rgba(140, 75, 208, 0.1);
+    box-shadow:
+        0 0 0 3px
+        rgba(140, 75, 208, 0.1);
+}
+
+.password-field {
+    position: relative;
+}
+
+.password-field input {
+    padding-right: 48px;
+}
+
+.password-toggle {
+    position: absolute;
+    top: 50%;
+    right: 10px;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    display: grid;
+    place-items: center;
+    color: #9da9ba;
+    background: transparent;
+    border: 0;
+    border-radius: 7px;
+    transform: translateY(-50%);
+    cursor: pointer;
+    font-size: 18px;
+    transition:
+        color 0.2s,
+        background 0.2s;
+}
+
+.password-toggle:hover {
+    color: #d1a2ff;
+    background:
+        rgba(
+            169,
+            87,
+            230,
+            0.08
+        );
 }
 
 .password-rules {
     margin-top: -7px;
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns:
+        repeat(2, minmax(0, 1fr));
     gap: 7px 12px;
     color: #69778d;
     font-size: 10px;
@@ -421,7 +548,13 @@ async function register() {
     margin: 0;
     padding: 10px 12px;
     color: #ff91a3;
-    background: rgba(255, 97, 122, 0.07);
+    background:
+        rgba(
+            255,
+            97,
+            122,
+            0.07
+        );
     border: 1px solid #6c3948;
     border-radius: 8px;
     font-size: 11px;
@@ -430,7 +563,12 @@ async function register() {
 .primary-button {
     min-height: 45px;
     color: white;
-    background: linear-gradient(135deg, #7431be, #a34cdd);
+    background:
+        linear-gradient(
+            135deg,
+            #7431be,
+            #a34cdd
+        );
     border: 0;
     border-radius: 9px;
     font-family: inherit;
@@ -460,6 +598,10 @@ async function register() {
     color: #c78cff;
     font-weight: 800;
     text-decoration: none;
+}
+
+.switch-auth a:hover {
+    text-decoration: underline;
 }
 
 footer {
