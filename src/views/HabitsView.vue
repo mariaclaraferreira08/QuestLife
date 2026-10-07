@@ -1,20 +1,99 @@
 <script setup>
-import { ref, onMounted } from "vue"
-
+import { computed, onMounted, ref } from "vue"
 import HabitForm from "../components/habits/HabitForm.vue"
 import HabitCard from "../components/habits/HabitCard.vue"
-
+import HabitFilters from "../components/habits/HabitFilters.vue"
 import habitService from "../services/habitService"
 import gameService from "../services/gameService"
 
 const habits = ref([])
 const showForm = ref(false)
 
+const filters = ref({
+    status: "all",
+    frequency: "all",
+    difficulty: "all",
+    order: "newest"
+})
+
 const feedback = ref({
     show: false,
     type: "info",
     title: "",
     message: ""
+})
+
+/*
+ * =========================
+ * FILTROS
+ * =========================
+ */
+
+function isCompletedToday(habit) {
+    if (!habit.lastCompletedAt) {
+        return false
+    }
+
+    const completed = new Date(habit.lastCompletedAt)
+    const today = new Date()
+
+    return (
+        completed.getFullYear() === today.getFullYear() &&
+        completed.getMonth() === today.getMonth() &&
+        completed.getDate() === today.getDate()
+    )
+}
+
+const filteredHabits = computed(() => {
+    let result = [
+        ...habits.value
+    ]
+
+    if (filters.value.status === "today") {
+        result = result.filter(habit =>
+            habitService.isScheduledForToday(habit.id)
+        )
+    }
+
+    if (filters.value.status === "pending") {
+        result = result.filter(habit =>
+            habitService.isScheduledForToday(habit.id) &&
+            !isCompletedToday(habit) &&
+            !habit.failed
+        )
+    }
+
+    if (filters.value.status === "completed") {
+        result = result.filter(habit =>
+            isCompletedToday(habit)
+        )
+    }
+
+    if (filters.value.status === "failed") {
+        result = result.filter(habit =>
+            habit.failed
+        )
+    }
+
+    if (filters.value.frequency !== "all") {
+        result = result.filter(habit =>
+            (habit.frequency || "daily") ===
+            filters.value.frequency
+        )
+    }
+
+    if (filters.value.difficulty !== "all") {
+        result = result.filter(habit =>
+            habit.difficulty ===
+            filters.value.difficulty
+        )
+    }
+
+    if (filters.value.order === "newest") {
+        result.reverse()
+    }
+
+    return result
 })
 
 /*
@@ -42,7 +121,7 @@ function closeFeedback() {
 
 /*
  * =========================
- * ATUALIZAR HÁBITOS
+ * HÁBITOS
  * =========================
  */
 
@@ -52,19 +131,9 @@ function refreshHabits() {
     ]
 }
 
-/*
- * =========================
- * CRIAR HÁBITO
- * =========================
- */
-
 function createHabit(habitData) {
-    habitService.addHabit(
-        habitData
-    )
-
+    habitService.addHabit(habitData)
     showForm.value = false
-
     refreshHabits()
 
     showFeedback(
@@ -73,12 +142,6 @@ function createHabit(habitData) {
         "Sua nova rotina foi adicionada."
     )
 }
-
-/*
- * =========================
- * CONCLUIR HÁBITO
- * =========================
- */
 
 function completeHabit(habitId) {
     const result =
@@ -144,12 +207,6 @@ function completeHabit(habitId) {
     )
 }
 
-/*
- * =========================
- * FALHAR HÁBITO
- * =========================
- */
-
 function failHabit(habitId) {
     const result =
         gameService.failHabitById(
@@ -207,8 +264,7 @@ function failHabit(habitId) {
 
     refreshHabits()
 
-    const damage =
-        result.damage
+    const damage = result.damage
 
     if (damage?.protected) {
         showFeedback(
@@ -227,17 +283,8 @@ function failHabit(habitId) {
     )
 }
 
-/*
- * =========================
- * REMOVER HÁBITO
- * =========================
- */
-
 function removeHabit(habitId) {
-    habitService.removeHabit(
-        habitId
-    )
-
+    habitService.removeHabit(habitId)
     refreshHabits()
 
     showFeedback(
@@ -246,12 +293,6 @@ function removeHabit(habitId) {
         "O hábito foi removido da sua rotina."
     )
 }
-
-/*
- * =========================
- * RECUPERAÇÃO DE SEQUÊNCIA
- * =========================
- */
 
 function restoreStreak() {
     showFeedback(
@@ -276,17 +317,11 @@ onMounted(() => {
     <section class="habits-page">
         <header class="page-header">
             <div>
-                <span>
-                    DAILY ROUTINES
-                </span>
-
-                <h1>
-                    Hábitos
-                </h1>
+                <span>DAILY ROUTINES</span>
+                <h1>Hábitos</h1>
 
                 <p>
-                    Construa sequências e fortaleça
-                    seu personagem todos os dias.
+                    Construa sequências e fortaleça seu personagem todos os dias.
                 </p>
             </div>
 
@@ -306,55 +341,16 @@ onMounted(() => {
             :class="feedback.type"
         >
             <div class="feedback-icon">
-                <span
-                    v-if="
-                        feedback.type ===
-                        'success'
-                    "
-                >
-                    ✓
-                </span>
-
-                <span
-                    v-else-if="
-                        feedback.type ===
-                        'warning'
-                    "
-                >
-                    !
-                </span>
-
-                <span
-                    v-else-if="
-                        feedback.type ===
-                        'error'
-                    "
-                >
-                    ×
-                </span>
-
-                <span
-                    v-else-if="
-                        feedback.type ===
-                        'special'
-                    "
-                >
-                    ✦
-                </span>
-
-                <span v-else>
-                    i
-                </span>
+                <span v-if="feedback.type === 'success'">✓</span>
+                <span v-else-if="feedback.type === 'warning'">!</span>
+                <span v-else-if="feedback.type === 'error'">×</span>
+                <span v-else-if="feedback.type === 'special'">✦</span>
+                <span v-else>i</span>
             </div>
 
             <div class="feedback-content">
-                <strong>
-                    {{ feedback.title }}
-                </strong>
-
-                <p>
-                    {{ feedback.message }}
-                </p>
+                <strong>{{ feedback.title }}</strong>
+                <p>{{ feedback.message }}</p>
             </div>
 
             <button
@@ -376,17 +372,11 @@ onMounted(() => {
             v-else-if="habits.length === 0"
             class="empty-state"
         >
-            <span class="empty-icon">
-                🔥
-            </span>
-
-            <h2>
-                Nenhum hábito criado
-            </h2>
+            <span class="empty-icon">🔥</span>
+            <h2>Nenhum hábito criado</h2>
 
             <p>
-                Comece uma rotina e construa
-                sua primeira sequência.
+                Comece uma rotina e construa sua primeira sequência.
             </p>
 
             <button
@@ -398,20 +388,34 @@ onMounted(() => {
             </button>
         </section>
 
-        <section
-            v-else
-            class="habit-list"
-        >
-            <HabitCard
-                v-for="habit in habits"
-                :key="habit.id"
-                :habit="habit"
-                @complete="completeHabit"
-                @fail="failHabit"
-                @remove="removeHabit"
-                @restore-streak="restoreStreak"
+        <template v-else>
+            <HabitFilters
+                v-model="filters"
+                :total="filteredHabits.length"
             />
-        </section>
+
+            <div
+                v-if="filteredHabits.length === 0"
+                class="filter-empty"
+            >
+                Nenhum hábito encontrado com os filtros selecionados.
+            </div>
+
+            <section
+                v-else
+                class="habit-list"
+            >
+                <HabitCard
+                    v-for="habit in filteredHabits"
+                    :key="habit.id"
+                    :habit="habit"
+                    @complete="completeHabit"
+                    @fail="failHabit"
+                    @remove="removeHabit"
+                    @restore-streak="restoreStreak"
+                />
+            </section>
+        </template>
     </section>
 </template>
 
@@ -422,10 +426,6 @@ onMounted(() => {
     margin: 0 auto;
     color: #eef1f7;
 }
-
-/* =========================
-   CABEÇALHO
-   ========================= */
 
 .page-header {
     display: flex;
@@ -454,68 +454,38 @@ onMounted(() => {
     font-size: 13px;
 }
 
-/* =========================
-   BOTÕES
-   ========================= */
-
 .new-habit-button,
 .create-first-button {
     padding: 12px 18px;
-
     color: white;
-
-    background:
-        linear-gradient(
-            90deg,
-            #7227dc,
-            #a928ef
-        );
-
+    background: linear-gradient(
+        90deg,
+        #7227dc,
+        #a928ef
+    );
     border: 1px solid #aa5cf2;
     border-radius: 7px;
-
     font-family: inherit;
     font-size: 11px;
     font-weight: bold;
-
     cursor: pointer;
-
     transition: 0.2s;
 }
 
 .new-habit-button:hover,
 .create-first-button:hover {
     transform: translateY(-1px);
-
-    box-shadow:
-        0 0 15px
-        rgba(
-            169,
-            40,
-            239,
-            0.2
-        );
+    box-shadow: 0 0 15px rgba(169, 40, 239, 0.2);
 }
-
-/* =========================
-   FEEDBACK
-   ========================= */
 
 .feedback {
     margin-bottom: 24px;
     padding: 14px 16px;
-
     display: grid;
-    grid-template-columns:
-        36px
-        minmax(0, 1fr)
-        auto;
-
+    grid-template-columns: 36px minmax(0, 1fr) auto;
     align-items: center;
     gap: 12px;
-
     background: #151f30;
-
     border: 1px solid #354158;
     border-radius: 10px;
 }
@@ -523,48 +493,32 @@ onMounted(() => {
 .feedback-icon {
     width: 34px;
     height: 34px;
-
     display: grid;
     place-items: center;
-
     border-radius: 8px;
-
     font-size: 16px;
     font-weight: 800;
-}
-
-.feedback-content {
-    min-width: 0;
 }
 
 .feedback-content strong {
     display: block;
     margin-bottom: 3px;
-
     color: #f2f5fb;
-
     font-size: 11px;
 }
 
 .feedback-content p {
     margin: 0;
-
     color: #929fb2;
-
     font-size: 10px;
     line-height: 1.5;
 }
 
 .feedback-close {
-    padding: 4px;
-
     color: #768398;
     background: transparent;
-
     border: 0;
-
     font-size: 18px;
-
     cursor: pointer;
 }
 
@@ -574,14 +528,7 @@ onMounted(() => {
 
 .feedback.success .feedback-icon {
     color: #68e2b8;
-
-    background:
-        rgba(
-            48,
-            163,
-            123,
-            0.14
-        );
+    background: rgba(48, 163, 123, 0.14);
 }
 
 .feedback.warning {
@@ -590,14 +537,7 @@ onMounted(() => {
 
 .feedback.warning .feedback-icon {
     color: #f3c55b;
-
-    background:
-        rgba(
-            206,
-            158,
-            54,
-            0.13
-        );
+    background: rgba(206, 158, 54, 0.13);
 }
 
 .feedback.error {
@@ -606,46 +546,21 @@ onMounted(() => {
 
 .feedback.error .feedback-icon {
     color: #ff7896;
-
-    background:
-        rgba(
-            206,
-            67,
-            94,
-            0.13
-        );
+    background: rgba(206, 67, 94, 0.13);
 }
 
 .feedback.special {
     border-color: #75439f;
-
-    background:
-        linear-gradient(
-            90deg,
-            rgba(117, 67, 159, 0.13),
-            #151f30 35%
-        );
+    background: linear-gradient(
+        90deg,
+        rgba(117, 67, 159, 0.13),
+        #151f30 35%
+    );
 }
 
 .feedback.special .feedback-icon {
     color: #ca82ff;
-
-    background:
-        rgba(
-            160,
-            73,
-            222,
-            0.14
-        );
-
-    box-shadow:
-        0 0 14px
-        rgba(
-            165,
-            73,
-            226,
-            0.13
-        );
+    background: rgba(160, 73, 222, 0.14);
 }
 
 .feedback.info {
@@ -654,33 +569,27 @@ onMounted(() => {
 
 .feedback.info .feedback-icon {
     color: #8eb8ee;
-
-    background:
-        rgba(
-            73,
-            119,
-            178,
-            0.13
-        );
+    background: rgba(73, 119, 178, 0.13);
 }
 
-/* =========================
-   ESTADO VAZIO
-   ========================= */
+.filter-empty {
+    padding: 30px;
+    color: #77869a;
+    text-align: center;
+    background: #101927;
+    border: 1px dashed #354158;
+    border-radius: 10px;
+    font-size: 11px;
+}
 
 .empty-state {
     min-height: 400px;
-
     display: flex;
     flex-direction: column;
-
     align-items: center;
     justify-content: center;
-
     text-align: center;
-
     background: #121c2d;
-
     border: 1px dashed #3b4960;
     border-radius: 12px;
 }
@@ -698,19 +607,11 @@ onMounted(() => {
     color: #7e8a9e;
 }
 
-/* =========================
-   LISTA
-   ========================= */
-
 .habit-list {
     display: flex;
     flex-direction: column;
     gap: 15px;
 }
-
-/* =========================
-   RESPONSIVO
-   ========================= */
 
 @media (max-width: 700px) {
     .page-header {
@@ -720,13 +621,6 @@ onMounted(() => {
 
     .new-habit-button {
         width: 100%;
-    }
-
-    .feedback {
-        grid-template-columns:
-            34px
-            minmax(0, 1fr)
-            auto;
     }
 }
 </style>

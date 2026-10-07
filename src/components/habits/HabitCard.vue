@@ -1,8 +1,6 @@
 <script setup>
 import { computed } from "vue"
-
-import HabitSchedule from "./HabitSchedule.vue"
-import HabitStats from "./HabitStats.vue"
+import habitService from "../../services/habitService"
 
 const props = defineProps({
     habit: {
@@ -14,11 +12,10 @@ const props = defineProps({
 const emit = defineEmits([
     "complete",
     "fail",
-    "remove",
-    "restore-streak"
+    "remove"
 ])
 
-const difficultyNames = {
+const difficultyLabels = {
     trivial: "TRIVIAL",
     easy: "FÁCIL",
     medium: "MÉDIO",
@@ -26,86 +23,224 @@ const difficultyNames = {
     legendary: "LENDÁRIO"
 }
 
-const frequency = computed(() => {
-    return props.habit.frequency || "daily"
-})
+const frequencyLabels = {
+    daily: "DIÁRIO",
+    weekly: "SEMANAL",
+    monthly: "MENSAL"
+}
 
-const difficultyName = computed(() => {
+const dayLabels = {
+    monday: "Seg",
+    tuesday: "Ter",
+    wednesday: "Qua",
+    thursday: "Qui",
+    friday: "Sex",
+    saturday: "Sáb",
+    sunday: "Dom"
+}
+
+const fullDayLabels = {
+    monday: "Segunda-feira",
+    tuesday: "Terça-feira",
+    wednesday: "Quarta-feira",
+    thursday: "Quinta-feira",
+    friday: "Sexta-feira",
+    saturday: "Sábado",
+    sunday: "Domingo"
+}
+
+const dayOrder = [
+    "monday",
+    "tuesday",
+    "wednesday",
+    "thursday",
+    "friday",
+    "saturday",
+    "sunday"
+]
+
+const difficultyLabel = computed(() => {
     return (
-        difficultyNames[props.habit.difficulty] ||
-        props.habit.difficulty ||
-        "TRIVIAL"
+        difficultyLabels[
+            props.habit.difficulty
+        ] || "FÁCIL"
     )
 })
 
-const alreadyCompletedToday = computed(() => {
-    if (!props.habit.lastCompletedAt) {
-        return false
-    }
-
-    const lastCompleted = new Date(
-        props.habit.lastCompletedAt
-    )
-
-    const today = new Date()
-
+const frequencyLabel = computed(() => {
     return (
-        lastCompleted.getFullYear() === today.getFullYear() &&
-        lastCompleted.getMonth() === today.getMonth() &&
-        lastCompleted.getDate() === today.getDate()
+        frequencyLabels[
+            props.habit.frequency
+        ] || "DIÁRIO"
+    )
+})
+
+const orderedDaysOfWeek = computed(() => {
+    const days =
+        props.habit.daysOfWeek || []
+
+    return [...days].sort(
+        (a, b) =>
+            dayOrder.indexOf(a) -
+            dayOrder.indexOf(b)
+    )
+})
+
+const showSchedule = computed(() => {
+    return (
+        props.habit.frequency ===
+            "daily" ||
+        props.habit.frequency ===
+            "weekly"
     )
 })
 
 const scheduledToday = computed(() => {
-    if (frequency.value === "daily") {
-        return true
+    return habitService
+        .isScheduledForToday(
+            props.habit.id
+        )
+})
+
+const completedToday = computed(() => {
+    return habitService
+        .isCompletedToday(
+            props.habit
+        )
+})
+
+const failedToday = computed(() => {
+    return habitService
+        .isFailedToday(
+            props.habit
+        )
+})
+
+const progress = computed(() => {
+    return habitService
+        .getCurrentProgress(
+            props.habit.id
+        )
+})
+
+const progressPercentage = computed(() => {
+    if (
+        !progress.value.goal
+    ) {
+        return 0
     }
 
-    if (frequency.value === "monthly") {
-        return true
+    return Math.min(
+        100,
+        Math.round(
+            (
+                progress.value.current /
+                progress.value.goal
+            ) * 100
+        )
+    )
+})
+
+const progressPeriod = computed(() => {
+    if (
+        props.habit.frequency ===
+        "weekly"
+    ) {
+        return "ESTA SEMANA"
     }
 
-    if (frequency.value === "weekly") {
-        const dayNames = [
-            "sunday",
-            "monday",
-            "tuesday",
-            "wednesday",
-            "thursday",
-            "friday",
-            "saturday"
-        ]
-
-        const today =
-            dayNames[new Date().getDay()]
-
-        return (
-            props.habit.daysOfWeek || []
-        ).includes(today)
+    if (
+        props.habit.frequency ===
+        "monthly"
+    ) {
+        return "ESTE MÊS"
     }
 
-    return false
+    return "HOJE"
+})
+
+const progressDescription = computed(() => {
+    if (
+        props.habit.frequency ===
+        "weekly"
+    ) {
+        return "conclusões semanais"
+    }
+
+    if (
+        props.habit.frequency ===
+        "monthly"
+    ) {
+        return "conclusões mensais"
+    }
+
+    return "conclusão diária"
+})
+
+const streakPeriod = computed(() => {
+    if (
+        props.habit.frequency ===
+        "weekly"
+    ) {
+        return "semanas"
+    }
+
+    if (
+        props.habit.frequency ===
+        "monthly"
+    ) {
+        return "meses"
+    }
+
+    return "dias"
 })
 
 const canComplete = computed(() => {
     return (
         scheduledToday.value &&
-        !alreadyCompletedToday.value &&
-        !props.habit.failed
+        !completedToday.value &&
+        !failedToday.value &&
+        progress.value.current <
+            progress.value.goal
     )
-})
-
-const canFailManually = computed(() => {
-    return frequency.value === "daily"
 })
 
 const canFail = computed(() => {
     return (
-        canFailManually.value &&
         scheduledToday.value &&
-        !alreadyCompletedToday.value &&
-        !props.habit.failed
+        !completedToday.value &&
+        !failedToday.value
     )
+})
+
+const statusMessage = computed(() => {
+    if (
+        !scheduledToday.value
+    ) {
+        return "ESTE HÁBITO NÃO ESTÁ PROGRAMADO PARA HOJE"
+    }
+
+    if (
+        completedToday.value
+    ) {
+        return "HÁBITO CONCLUÍDO HOJE"
+    }
+
+    if (
+        failedToday.value
+    ) {
+        return "HÁBITO MARCADO COMO FALHA HOJE"
+    }
+
+    if (
+        progress.value.current >=
+            progress.value.goal &&
+        progress.value.goal > 0
+    ) {
+        return "META DO PERÍODO CONCLUÍDA"
+    }
+
+    return null
 })
 
 function completeHabit() {
@@ -131,74 +266,59 @@ function failHabit() {
 }
 
 function removeHabit() {
-    const confirmed = window.confirm(
-        `Excluir o hábito "${props.habit.title}"?`
-    )
-
-    if (!confirmed) {
-        return
-    }
-
     emit(
         "remove",
-        props.habit.id
-    )
-}
-
-function restoreStreak() {
-    emit(
-        "restore-streak",
         props.habit.id
     )
 }
 </script>
 
 <template>
-    <article
-        class="habit-card"
-        :class="{
-            failed: habit.failed
-        }"
-    >
+    <article class="habit-card">
         <header class="habit-header">
             <div class="habit-title-area">
                 <div class="habit-icon">
                     🔥
                 </div>
 
-                <div>
+                <div class="habit-title-content">
                     <div class="title-row">
-                        <h2>
+                        <h3>
                             {{ habit.title }}
-                        </h2>
+                        </h3>
 
                         <span
-                            class="difficulty"
+                            class="tag difficulty"
                             :class="habit.difficulty"
                         >
-                            {{ difficultyName }}
+                            {{
+                                difficultyLabel
+                            }}
                         </span>
 
-                        <span class="frequency-badge">
+                        <span
+                            class="tag frequency"
+                        >
                             {{
-                                frequency === "daily"
-                                    ? "DIÁRIO"
-                                    : frequency === "weekly"
-                                        ? "SEMANAL"
-                                        : "MENSAL"
+                                frequencyLabel
                             }}
                         </span>
                     </div>
 
-                    <p v-if="habit.description">
-                        {{ habit.description }}
+                    <p
+                        v-if="habit.description"
+                        class="description"
+                    >
+                        {{
+                            habit.description
+                        }}
                     </p>
                 </div>
             </div>
 
             <button
                 type="button"
-                class="delete-button"
+                class="remove-button"
                 title="Excluir hábito"
                 @click="removeHabit"
             >
@@ -206,315 +326,577 @@ function restoreStreak() {
             </button>
         </header>
 
-        <div
-            v-if="alreadyCompletedToday"
-            class="habit-message completed-message"
+        <section
+            v-if="showSchedule"
+            class="schedule"
         >
-            ✓ HÁBITO CONCLUÍDO HOJE
+            <div class="schedule-header">
+                <span>
+                    PROGRAMADO PARA
+                </span>
+            </div>
+
+            <div
+                v-if="orderedDaysOfWeek.length"
+                class="schedule-days"
+            >
+                <span
+                    v-for="day in orderedDaysOfWeek"
+                    :key="day"
+                    class="day-chip"
+                    :title="fullDayLabels[day]"
+                >
+                    {{
+                        dayLabels[day]
+                    }}
+                </span>
+            </div>
+
+            <div
+                v-else
+                class="every-day"
+            >
+                Todos os dias
+            </div>
+        </section>
+
+        <div
+            v-if="statusMessage"
+            class="status-message"
+            :class="{
+                completed: completedToday,
+                failed: failedToday
+            }"
+        >
+            ◉ {{ statusMessage }}
         </div>
 
-        <div
-            v-else-if="habit.failed"
-            class="habit-message failed-message"
+        <section class="progress-card">
+            <div class="progress-header">
+                <span>
+                    PROGRESSO
+                </span>
+
+                <strong>
+                    {{
+                        progressPeriod
+                    }}
+                </strong>
+            </div>
+
+            <div class="progress-value">
+                <strong>
+                    {{
+                        progress.current
+                    }}
+                    /
+                    {{
+                        progress.goal
+                    }}
+                </strong>
+
+                <span>
+                    {{
+                        progressDescription
+                    }}
+                </span>
+
+                <b>
+                    {{
+                        progressPercentage
+                    }}%
+                </b>
+            </div>
+
+            <div class="progress-bar">
+                <div
+                    class="progress-fill"
+                    :style="{
+                        width:
+                            progressPercentage +
+                            '%'
+                    }"
+                ></div>
+            </div>
+        </section>
+
+        <section class="streak-grid">
+            <div class="streak-card">
+                <span class="streak-title">
+                    SEQUÊNCIA ATUAL
+                </span>
+
+                <div class="streak-value">
+                    <strong>
+                        🔥
+                        {{
+                            habit.streak ||
+                            0
+                        }}
+                    </strong>
+
+                    <span>
+                        {{
+                            streakPeriod
+                        }}
+                    </span>
+                </div>
+            </div>
+
+            <div class="streak-card">
+                <span class="streak-title">
+                    MELHOR SEQUÊNCIA
+                </span>
+
+                <div class="streak-value">
+                    <strong>
+                        🏆
+                        {{
+                            habit.bestStreak ||
+                            0
+                        }}
+                    </strong>
+
+                    <span>
+                        {{
+                            streakPeriod
+                        }}
+                    </span>
+                </div>
+            </div>
+        </section>
+
+        <section
+            v-if="scheduledToday"
+            class="actions"
         >
-            ✕ SEQUÊNCIA INTERROMPIDA
-        </div>
+            <button
+                type="button"
+                class="complete-button"
+                :disabled="!canComplete"
+                @click="completeHabit"
+            >
+                ✓ CONCLUIR
+            </button>
+
+            <button
+                type="button"
+                class="fail-button"
+                :disabled="!canFail"
+                @click="failHabit"
+            >
+                ✕ FALHAR
+            </button>
+        </section>
 
         <div
-            v-else-if="!scheduledToday"
-            class="habit-message rest-message"
+            v-else
+            class="not-scheduled"
         >
-            ◷ ESTE HÁBITO NÃO ESTÁ PROGRAMADO PARA HOJE
+            NÃO PROGRAMADO HOJE
         </div>
-
-        <HabitSchedule
-            :habit="habit"
-        />
-
-        <HabitStats
-            :habit="habit"
-        />
-
-        <footer class="habit-actions">
-            <template v-if="habit.failed">
-                <button
-                    type="button"
-                    class="restore-button"
-                    @click="restoreStreak"
-                >
-                    🧪 RECUPERAR SEQUÊNCIA
-                </button>
-            </template>
-
-            <template v-else>
-                <button
-                    type="button"
-                    class="complete-button"
-                    :disabled="!canComplete"
-                    @click="completeHabit"
-                >
-                    <template v-if="alreadyCompletedToday">
-                        ✓ CONCLUÍDO HOJE
-                    </template>
-
-                    <template v-else-if="!scheduledToday">
-                        NÃO PROGRAMADO HOJE
-                    </template>
-
-                    <template v-else>
-                        ✓ CONCLUIR HOJE
-                    </template>
-                </button>
-
-                <button
-                    v-if="canFailManually"
-                    type="button"
-                    class="fail-button"
-                    :disabled="!canFail"
-                    @click="failHabit"
-                >
-                    <template v-if="alreadyCompletedToday">
-                        ✕ JÁ CONCLUÍDO
-                    </template>
-
-                    <template v-else-if="!scheduledToday">
-                        NÃO PROGRAMADO HOJE
-                    </template>
-
-                    <template v-else>
-                        ✕ FALHEI
-                    </template>
-                </button>
-            </template>
-        </footer>
     </article>
 </template>
 
 <style scoped>
 .habit-card {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-    padding: 20px;
-    color: #eef1f7;
+    padding: 18px;
     background: #151f30;
-    border: 1px solid #354158;
-    border-radius: 11px;
-    transition: 0.2s;
-}
-
-.habit-card:hover {
-    border-color: #604180;
-}
-
-.habit-card.failed {
-    border-color: #74394b;
+    border: 1px solid #604381;
+    border-radius: 12px;
 }
 
 .habit-header {
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
-    gap: 20px;
+    gap: 14px;
 }
 
 .habit-title-area {
+    min-width: 0;
     display: flex;
     align-items: flex-start;
-    gap: 13px;
+    gap: 12px;
 }
 
 .habit-icon {
     width: 38px;
     height: 38px;
     flex-shrink: 0;
-    display: grid;
-    place-items: center;
-    background: #211b35;
-    border: 1px solid #493269;
-    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #241a3a;
+    border: 1px solid #55406d;
+    border-radius: 7px;
     font-size: 18px;
+}
+
+.habit-title-content {
+    min-width: 0;
 }
 
 .title-row {
     display: flex;
     align-items: center;
     flex-wrap: wrap;
-    gap: 10px;
+    gap: 9px;
 }
 
-.title-row h2 {
+.title-row h3 {
     margin: 0;
-    font-size: 17px;
+    color: #f3f5fa;
+    font-size: 16px;
+    font-weight: 700;
 }
 
-.habit-title-area p {
-    margin: 6px 0 0;
+.description {
+    margin: 8px 0 0;
     color: #8794a8;
     font-size: 12px;
+    line-height: 1.5;
 }
 
-.difficulty,
-.frequency-badge {
-    padding: 4px 8px;
-    border: 1px solid;
-    border-radius: 20px;
+.tag {
+    padding: 4px 10px;
+    border-radius: 999px;
     font-size: 9px;
-    letter-spacing: 1px;
+    font-weight: 700;
+    letter-spacing: 0.8px;
 }
 
-.difficulty.trivial {
-    color: #9ba7ba;
+.tag.difficulty {
+    color: #65e7ba;
+    border: 1px solid #2b9d7d;
 }
 
-.difficulty.easy {
-    color: #69d4a9;
+.tag.difficulty.trivial {
+    color: #94a3b8;
+    border-color: #64748b;
 }
 
-.difficulty.medium {
-    color: #e2c556;
+.tag.difficulty.easy {
+    color: #65e7ba;
+    border-color: #2b9d7d;
 }
 
-.difficulty.hard {
-    color: #ef796e;
+.tag.difficulty.medium {
+    color: #f4d06f;
+    border-color: #a88435;
 }
 
-.difficulty.legendary {
-    color: #c27cff;
+.tag.difficulty.hard {
+    color: #ff8a8a;
+    border-color: #a44655;
 }
 
-.frequency-badge {
-    color: #b477e8;
-    background: rgba(138, 65, 194, 0.08);
-    border-color: #674082;
+.tag.difficulty.legendary {
+    color: #d69cff;
+    border-color: #8d52bd;
 }
 
-.delete-button {
-    width: 30px;
-    height: 30px;
-    flex-shrink: 0;
-    color: #667389;
+.tag.frequency {
+    color: #ce8cff;
+    border: 1px solid #6b4089;
+}
+
+.remove-button {
+    padding: 0;
+    color: #73829a;
     background: transparent;
     border: 0;
-    font-size: 21px;
+    font-family: inherit;
+    font-size: 24px;
+    line-height: 1;
     cursor: pointer;
 }
 
-.delete-button:hover {
-    color: #ff617a;
+.remove-button:hover {
+    color: #ff708c;
 }
 
-.habit-message {
-    padding: 9px 12px;
-    border-radius: 6px;
-    font-size: 9px;
-    letter-spacing: 1px;
-}
-
-.completed-message {
-    color: #54d6ab;
-    background: rgba(51, 184, 143, 0.08);
-    border: 1px solid #276c5b;
-}
-
-.failed-message {
-    color: #ef7889;
-    background: rgba(199, 67, 90, 0.08);
-    border: 1px solid #733848;
-}
-
-.rest-message {
-    color: #8e9aad;
+.schedule {
+    margin-top: 16px;
+    padding: 13px 15px;
     background: #101927;
-    border: 1px solid #2e3a4d;
+    border: 1px solid #303d52;
+    border-radius: 8px;
 }
 
-.habit-actions {
+.schedule-header {
     display: flex;
-    gap: 10px;
-    padding-top: 3px;
+    align-items: center;
 }
 
-.complete-button,
-.fail-button,
-.restore-button {
+.schedule-header span {
+    color: #75849b;
+    font-size: 9px;
+    letter-spacing: 1.2px;
+}
+
+.schedule-days {
+    margin-top: 11px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+}
+
+.day-chip {
+    min-width: 39px;
+    padding: 6px 9px;
+    color: #d7baff;
+    background: rgba(
+        134,
+        69,
+        195,
+        0.12
+    );
+    border: 1px solid #65418a;
+    border-radius: 999px;
+    text-align: center;
+    font-size: 10px;
+    font-weight: 700;
+}
+
+.every-day {
+    margin-top: 10px;
+    color: #d7baff;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.status-message {
+    margin-top: 16px;
+    padding: 9px 13px;
+    color: #8fa5c8;
+    background: #101927;
+    border: 1px solid #303d52;
+    border-radius: 7px;
+    font-size: 9px;
+    letter-spacing: 1.1px;
+}
+
+.status-message.completed {
+    color: #61d9af;
+    border-color: rgba(
+        74,
+        194,
+        151,
+        0.4
+    );
+}
+
+.status-message.failed {
+    color: #ff8298;
+    border-color: rgba(
+        255,
+        99,
+        133,
+        0.4
+    );
+}
+
+.progress-card {
+    margin-top: 16px;
+    padding: 16px;
+    background: #101927;
+    border: 1px solid #303d52;
+    border-radius: 8px;
+}
+
+.progress-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.progress-header span {
+    color: #7990b2;
+    font-size: 9px;
+    letter-spacing: 1.2px;
+}
+
+.progress-header strong {
+    color: #ce72ff;
+    font-size: 10px;
+    letter-spacing: 0.8px;
+}
+
+.progress-value {
+    margin-top: 15px;
+    display: flex;
+    align-items: baseline;
+    gap: 7px;
+}
+
+.progress-value > strong {
+    color: #f4f6fb;
+    font-size: 23px;
+}
+
+.progress-value span {
+    color: #768ba8;
+    font-size: 9px;
+}
+
+.progress-value b {
+    margin-left: auto;
+    color: #c76cff;
+    font-size: 11px;
+}
+
+.progress-bar {
+    height: 7px;
+    margin-top: 14px;
+    overflow: hidden;
+    background: #090f18;
+    border-radius: 999px;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(
+        90deg,
+        #813ce8,
+        #b052ed
+    );
+    border-radius: inherit;
+    transition: width 0.25s ease;
+}
+
+.streak-grid {
+    margin-top: 16px;
+    display: grid;
+    grid-template-columns:
+        repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.streak-card {
+    padding: 16px;
+    background: #101927;
+    border: 1px solid #303d52;
+    border-radius: 8px;
+}
+
+.streak-title {
+    color: #7288a8;
+    font-size: 9px;
+    letter-spacing: 1.2px;
+}
+
+.streak-value {
+    margin-top: 14px;
+    display: flex;
+    align-items: baseline;
+    gap: 7px;
+}
+
+.streak-value strong {
+    color: #f3f5fa;
+    font-size: 19px;
+}
+
+.streak-value span {
+    color: #77899f;
+    font-size: 10px;
+}
+
+.actions {
+    margin-top: 18px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.actions button {
     min-height: 40px;
-    padding: 10px 16px;
     border-radius: 7px;
     font-family: inherit;
     font-size: 10px;
-    font-weight: bold;
+    font-weight: 700;
+    letter-spacing: 0.7px;
     cursor: pointer;
-    transition: 0.2s;
 }
 
 .complete-button {
-    flex: 1;
-    color: #09291f;
-    background: #45d3a4;
-    border: 1px solid #5ce5b8;
+    color: #66e1b5;
+    background: rgba(
+        48,
+        177,
+        133,
+        0.1
+    );
+    border: 1px solid #2c896b;
 }
 
 .complete-button:hover:not(:disabled) {
-    transform: translateY(-1px);
-}
-
-.complete-button:disabled {
-    color: #637083;
-    background: #111a28;
-    border-color: #303b4d;
-    cursor: not-allowed;
-    opacity: 0.7;
+    background: rgba(
+        48,
+        177,
+        133,
+        0.18
+    );
 }
 
 .fail-button {
-    color: #e88190;
-    background: #1d1721;
-    border: 1px solid #713847;
+    color: #ff8298;
+    background: rgba(
+        209,
+        72,
+        101,
+        0.08
+    );
+    border: 1px solid #7c3f51;
 }
 
 .fail-button:hover:not(:disabled) {
-    background: #291920;
-    transform: translateY(-1px);
+    background: rgba(
+        209,
+        72,
+        101,
+        0.16
+    );
 }
 
-.fail-button:disabled {
-    color: #637083;
-    background: #111a28;
-    border-color: #303b4d;
+.actions button:disabled {
+    opacity: 0.35;
     cursor: not-allowed;
-    opacity: 0.7;
 }
 
-.restore-button {
-    width: 100%;
-    color: white;
-    background:
-        linear-gradient(
-            90deg,
-            #6827b8,
-            #9d2ce1
-        );
-    border: 1px solid #a75ce9;
+.not-scheduled {
+    margin-top: 18px;
+    padding: 11px;
+    color: #5e6b80;
+    background: #101927;
+    border: 1px solid #2f3a4c;
+    border-radius: 7px;
+    text-align: center;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.6px;
 }
 
-.restore-button:hover {
-    box-shadow:
-        0 0 14px
-        rgba(157, 44, 225, 0.2);
-}
+@media (max-width: 700px) {
+    .habit-card {
+        padding: 14px;
+    }
 
-@media (max-width: 600px) {
     .habit-header {
-        gap: 10px;
+        gap: 9px;
     }
 
-    .habit-actions {
-        flex-direction: column;
+    .title-row {
+        gap: 6px;
     }
 
-    .fail-button {
-        width: 100%;
+    .streak-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .actions {
+        grid-template-columns: 1fr;
     }
 }
 </style>

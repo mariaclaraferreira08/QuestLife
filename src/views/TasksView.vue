@@ -1,15 +1,24 @@
 <script setup>
 import {
     ref,
+    computed,
     onMounted
 } from "vue"
 
 import TaskList from "../components/TaskList.vue"
+import TaskFilters from "../components/tasks/TaskFilters.vue"
+import TaskFeedback from "../components/tasks/TaskFeedback.vue"
 
 import taskService from "../services/taskService"
 import gameService from "../services/gameService"
 
 const tasks = ref([])
+
+const filters = ref({
+    status: "all",
+    difficulty: "all",
+    order: "newest"
+})
 
 const feedback = ref({
     show: false,
@@ -17,6 +26,105 @@ const feedback = ref({
     title: "",
     message: ""
 })
+
+/*
+ * =========================
+ * FILTROS
+ * =========================
+ */
+
+function isTaskToday(task) {
+    if (!task.deadline) {
+        return false
+    }
+
+    const deadline =
+        new Date(
+            `${task.deadline}T00:00:00`
+        )
+
+    const today =
+        new Date()
+
+    return (
+        deadline.getFullYear() ===
+            today.getFullYear() &&
+        deadline.getMonth() ===
+            today.getMonth() &&
+        deadline.getDate() ===
+            today.getDate()
+    )
+}
+
+const filteredTasks =
+    computed(() => {
+        let result = [
+            ...tasks.value
+        ]
+
+        if (
+            filters.value.status ===
+            "today"
+        ) {
+            result = result.filter(
+                task =>
+                    isTaskToday(
+                        task
+                    )
+            )
+        }
+
+        if (
+            filters.value.status ===
+            "pending"
+        ) {
+            result = result.filter(
+                task =>
+                    !task.completed &&
+                    !task.failed
+            )
+        }
+
+        if (
+            filters.value.status ===
+            "completed"
+        ) {
+            result = result.filter(
+                task =>
+                    task.completed
+            )
+        }
+
+        if (
+            filters.value.status ===
+            "failed"
+        ) {
+            result = result.filter(
+                task =>
+                    task.failed
+            )
+        }
+
+        if (
+            filters.value.difficulty !==
+            "all"
+        ) {
+            result = result.filter(
+                task =>
+                    task.difficulty ===
+                    filters.value.difficulty
+            )
+        }
+
+        if (
+            filters.value.order ===
+            "newest"
+        ) {
+            result.reverse()
+        }
+
+        return result
+    })
 
 /*
  * =========================
@@ -38,12 +146,13 @@ function showFeedback(
 }
 
 function closeFeedback() {
-    feedback.value.show = false
+    feedback.value.show =
+        false
 }
 
 /*
  * =========================
- * ATUALIZAR LISTA
+ * TAREFAS
  * =========================
  */
 
@@ -53,13 +162,9 @@ function refreshTasks() {
     ]
 }
 
-/*
- * =========================
- * CONCLUIR TAREFA
- * =========================
- */
-
-function completeTask(taskId) {
+function completeTask(
+    taskId
+) {
     const result =
         gameService.completeTaskById(
             taskId
@@ -126,13 +231,9 @@ function completeTask(taskId) {
     )
 }
 
-/*
- * =========================
- * FALHAR TAREFA
- * =========================
- */
-
-function failTask(taskId) {
+function failTask(
+    taskId
+) {
     const result =
         gameService.failTaskById(
             taskId
@@ -181,7 +282,9 @@ function failTask(taskId) {
     const damage =
         result.damage
 
-    if (damage?.protected) {
+    if (
+        damage?.protected
+    ) {
         showFeedback(
             "special",
             "Amuleto de Proteção ativado!",
@@ -198,13 +301,9 @@ function failTask(taskId) {
     )
 }
 
-/*
- * =========================
- * REMOVER TAREFA
- * =========================
- */
-
-function removeTask(taskId) {
+function removeTask(
+    taskId
+) {
     taskService.removeTask(
         taskId
     )
@@ -217,12 +316,6 @@ function removeTask(taskId) {
         "A missão foi removida da sua lista."
     )
 }
-
-/*
- * =========================
- * ADICIONAR SUBTAREFA
- * =========================
- */
 
 function addSubtask(
     taskId,
@@ -241,13 +334,6 @@ function addSubtask(
         "Uma nova etapa foi adicionada à missão."
     )
 }
-
-/*
- * =========================
- * MARCAR / DESMARCAR
- * SUBTAREFA
- * =========================
- */
 
 function toggleSubtask(
     taskId,
@@ -289,7 +375,8 @@ function toggleSubtask(
         subtasks.length > 0 &&
         subtasks.every(
             subtask =>
-                subtask.completed === true
+                subtask.completed ===
+                true
         ) &&
         !updatedTask.completed &&
         !updatedTask.failed
@@ -343,8 +430,7 @@ onMounted(() => {
                 </h1>
 
                 <p>
-                    Complete missões para
-                    ganhar XP e moedas.
+                    Complete missões para ganhar XP e moedas.
                 </p>
             </div>
 
@@ -356,54 +442,29 @@ onMounted(() => {
             </RouterLink>
         </header>
 
+        <TaskFeedback
+            :feedback="feedback"
+            @close="closeFeedback"
+        />
+
+        <TaskFilters
+            v-model="filters"
+            :total="filteredTasks.length"
+        />
+
         <div
-            v-if="feedback.show"
-            class="feedback"
-            :class="feedback.type"
+            v-if="
+                tasks.length > 0 &&
+                filteredTasks.length === 0
+            "
+            class="filter-empty"
         >
-            <div class="feedback-icon">
-                <span v-if="feedback.type === 'success'">
-                    ✓
-                </span>
-
-                <span v-else-if="feedback.type === 'warning'">
-                    !
-                </span>
-
-                <span v-else-if="feedback.type === 'error'">
-                    ×
-                </span>
-
-                <span v-else-if="feedback.type === 'special'">
-                    ✦
-                </span>
-
-                <span v-else>
-                    i
-                </span>
-            </div>
-
-            <div class="feedback-content">
-                <strong>
-                    {{ feedback.title }}
-                </strong>
-
-                <p>
-                    {{ feedback.message }}
-                </p>
-            </div>
-
-            <button
-                type="button"
-                class="feedback-close"
-                @click="closeFeedback"
-            >
-                ×
-            </button>
+            Nenhuma missão encontrada com os filtros selecionados.
         </div>
 
         <TaskList
-            :tasks="tasks"
+            v-else
+            :tasks="filteredTasks"
             @complete-task="completeTask"
             @fail-task="failTask"
             @remove-task="removeTask"
@@ -452,199 +513,31 @@ onMounted(() => {
     padding: 12px 18px;
     color: white;
     text-decoration: none;
-
-    background:
-        linear-gradient(
-            90deg,
-            #7227dc,
-            #a928ef
-        );
-
+    background: linear-gradient(
+        90deg,
+        #7227dc,
+        #a928ef
+    );
     border: 1px solid #aa5cf2;
     border-radius: 7px;
-
     font-size: 12px;
     font-weight: bold;
-
     transition: 0.2s;
 }
 
 .new-task-button:hover {
     transform: translateY(-1px);
-
-    box-shadow:
-        0 0 15px
-        rgba(
-            147,
-            44,
-            255,
-            0.25
-        );
+    box-shadow: 0 0 15px rgba(147, 44, 255, 0.25);
 }
 
-/* =========================
-   FEEDBACK
-   ========================= */
-
-.feedback {
-    margin-bottom: 24px;
-    padding: 14px 16px;
-
-    display: grid;
-    grid-template-columns:
-        36px
-        minmax(0, 1fr)
-        auto;
-
-    align-items: center;
-    gap: 12px;
-
-    background: #151f30;
-    border: 1px solid #354158;
+.filter-empty {
+    padding: 30px;
+    color: #77869a;
+    text-align: center;
+    background: #101927;
+    border: 1px dashed #354158;
     border-radius: 10px;
-}
-
-.feedback-icon {
-    width: 34px;
-    height: 34px;
-
-    display: grid;
-    place-items: center;
-
-    border-radius: 8px;
-
-    font-size: 16px;
-    font-weight: 800;
-}
-
-.feedback-content {
-    min-width: 0;
-}
-
-.feedback-content strong {
-    display: block;
-    margin-bottom: 3px;
-
-    color: #f2f5fb;
-
     font-size: 11px;
-}
-
-.feedback-content p {
-    margin: 0;
-
-    color: #929fb2;
-
-    font-size: 10px;
-    line-height: 1.5;
-}
-
-.feedback-close {
-    padding: 4px;
-
-    color: #768398;
-    background: transparent;
-
-    border: 0;
-
-    font-size: 18px;
-    cursor: pointer;
-}
-
-.feedback.success {
-    border-color: #347e69;
-}
-
-.feedback.success .feedback-icon {
-    color: #68e2b8;
-
-    background:
-        rgba(
-            48,
-            163,
-            123,
-            0.14
-        );
-}
-
-.feedback.warning {
-    border-color: #826a34;
-}
-
-.feedback.warning .feedback-icon {
-    color: #f3c55b;
-
-    background:
-        rgba(
-            206,
-            158,
-            54,
-            0.13
-        );
-}
-
-.feedback.error {
-    border-color: #834456;
-}
-
-.feedback.error .feedback-icon {
-    color: #ff7896;
-
-    background:
-        rgba(
-            206,
-            67,
-            94,
-            0.13
-        );
-}
-
-.feedback.special {
-    border-color: #75439f;
-
-    background:
-        linear-gradient(
-            90deg,
-            rgba(117, 67, 159, 0.13),
-            #151f30 35%
-        );
-}
-
-.feedback.special .feedback-icon {
-    color: #ca82ff;
-
-    background:
-        rgba(
-            160,
-            73,
-            222,
-            0.14
-        );
-
-    box-shadow:
-        0 0 14px
-        rgba(
-            165,
-            73,
-            226,
-            0.13
-        );
-}
-
-.feedback.info {
-    border-color: #3f5674;
-}
-
-.feedback.info .feedback-icon {
-    color: #8eb8ee;
-
-    background:
-        rgba(
-            73,
-            119,
-            178,
-            0.13
-        );
 }
 
 @media (max-width: 700px) {
@@ -655,13 +548,6 @@ onMounted(() => {
 
     .new-task-button {
         text-align: center;
-    }
-
-    .feedback {
-        grid-template-columns:
-            34px
-            minmax(0, 1fr)
-            auto;
     }
 }
 </style>

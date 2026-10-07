@@ -1,14 +1,20 @@
 <script setup>
-import { ref, computed, onMounted } from "vue"
-
+import { computed, onMounted, ref } from "vue"
 import DailyForm from "../components/dailies/DailyForm.vue"
 import DailyCard from "../components/dailies/DailyCard.vue"
-
+import DailyFilters from "../components/dailies/DailyFilters.vue"
+import DailyFeedback from "../components/dailies/DailyFeedback.vue"
 import dailyService from "../services/dailyService"
 import gameService from "../services/gameService"
 
 const dailies = ref([])
 const showForm = ref(false)
+
+const filters = ref({
+    status: "all",
+    difficulty: "all",
+    order: "newest"
+})
 
 const feedback = ref({
     show: false,
@@ -17,11 +23,74 @@ const feedback = ref({
     message: ""
 })
 
-function refreshDailies() {
-    dailies.value = [
-        ...dailyService.getDailies()
+/*
+ * =========================
+ * FILTROS
+ * =========================
+ */
+
+const filteredDailies = computed(() => {
+    let result = [
+        ...dailies.value
     ]
-}
+
+    if (filters.value.status === "today") {
+        result = result.filter(daily =>
+            dailyService.isScheduledToday(daily)
+        )
+    }
+
+    if (filters.value.status === "pending") {
+        result = result.filter(daily =>
+            dailyService.isScheduledToday(daily) &&
+            !dailyService.isCompletedToday(daily) &&
+            !dailyService.isFailedToday(daily)
+        )
+    }
+
+    if (filters.value.status === "completed") {
+        result = result.filter(daily =>
+            dailyService.isCompletedToday(daily)
+        )
+    }
+
+    if (filters.value.status === "failed") {
+        result = result.filter(daily =>
+            dailyService.isFailedToday(daily)
+        )
+    }
+
+    if (filters.value.difficulty !== "all") {
+        result = result.filter(daily =>
+            daily.difficulty ===
+            filters.value.difficulty
+        )
+    }
+
+    if (filters.value.order === "newest") {
+        result.reverse()
+    }
+
+    return result
+})
+
+const todayDailies = computed(() =>
+    filteredDailies.value.filter(daily =>
+        dailyService.isScheduledToday(daily)
+    )
+)
+
+const otherDailies = computed(() =>
+    filteredDailies.value.filter(daily =>
+        !dailyService.isScheduledToday(daily)
+    )
+)
+
+/*
+ * =========================
+ * FEEDBACK
+ * =========================
+ */
 
 function showFeedback(
     type,
@@ -40,31 +109,21 @@ function closeFeedback() {
     feedback.value.show = false
 }
 
-const todayDailies = computed(() => {
-    return dailies.value.filter(
-        daily =>
-            dailyService.isScheduledToday(
-                daily
-            )
-    )
-})
+/*
+ * =========================
+ * DIÁRIAS
+ * =========================
+ */
 
-const otherDailies = computed(() => {
-    return dailies.value.filter(
-        daily =>
-            !dailyService.isScheduledToday(
-                daily
-            )
-    )
-})
+function refreshDailies() {
+    dailies.value = [
+        ...dailyService.getDailies()
+    ]
+}
 
 function createDaily(dailyData) {
-    dailyService.addDaily(
-        dailyData
-    )
-
+    dailyService.addDaily(dailyData)
     showForm.value = false
-
     refreshDailies()
 
     showFeedback(
@@ -80,9 +139,9 @@ function completeDaily(dailyId) {
             dailyId
         )
 
-    if (!result.success) {
+    if (!result?.success) {
         if (
-            result.reason ===
+            result?.reason ===
             "already-completed-today"
         ) {
             showFeedback(
@@ -91,7 +150,7 @@ function completeDaily(dailyId) {
                 "Você já concluiu esta diária hoje."
             )
         } else if (
-            result.reason ===
+            result?.reason ===
             "already-failed-today"
         ) {
             showFeedback(
@@ -100,7 +159,7 @@ function completeDaily(dailyId) {
                 "Esta diária já foi marcada como falha hoje."
             )
         } else if (
-            result.reason ===
+            result?.reason ===
             "not-scheduled-today"
         ) {
             showFeedback(
@@ -134,9 +193,9 @@ function failDaily(dailyId) {
             dailyId
         )
 
-    if (!result.success) {
+    if (!result?.success) {
         if (
-            result.reason ===
+            result?.reason ===
             "already-completed-today"
         ) {
             showFeedback(
@@ -145,7 +204,7 @@ function failDaily(dailyId) {
                 "Você já concluiu esta diária hoje."
             )
         } else if (
-            result.reason ===
+            result?.reason ===
             "already-failed-today"
         ) {
             showFeedback(
@@ -154,7 +213,7 @@ function failDaily(dailyId) {
                 "Você já marcou esta diária como falha hoje."
             )
         } else if (
-            result.reason ===
+            result?.reason ===
             "not-scheduled-today"
         ) {
             showFeedback(
@@ -222,10 +281,7 @@ function failDaily(dailyId) {
 }
 
 function removeDaily(dailyId) {
-    dailyService.removeDaily(
-        dailyId
-    )
-
+    dailyService.removeDaily(dailyId)
     refreshDailies()
 
     showFeedback(
@@ -235,26 +291,26 @@ function removeDaily(dailyId) {
     )
 }
 
-onMounted(
-    refreshDailies
-)
+/*
+ * =========================
+ * INICIALIZAÇÃO
+ * =========================
+ */
+
+onMounted(() => {
+    refreshDailies()
+})
 </script>
 
 <template>
     <section class="dailies-page">
         <header class="page-header">
             <div>
-                <span>
-                    DAILY QUESTS
-                </span>
-
-                <h1>
-                    Diárias
-                </h1>
+                <span>DAILY QUESTS</span>
+                <h1>Diárias</h1>
 
                 <p>
-                    Missões recorrentes que
-                    retornam nos dias programados.
+                    Missões recorrentes que retornam nos dias programados.
                 </p>
             </div>
 
@@ -268,51 +324,10 @@ onMounted(
             </button>
         </header>
 
-        <div
-            v-if="feedback.show"
-            class="feedback"
-            :class="feedback.type"
-        >
-            <div class="feedback-icon">
-                <span v-if="feedback.type === 'success'">
-                    ✓
-                </span>
-
-                <span v-else-if="feedback.type === 'warning'">
-                    !
-                </span>
-
-                <span v-else-if="feedback.type === 'error'">
-                    ×
-                </span>
-
-                <span v-else-if="feedback.type === 'special'">
-                    ✦
-                </span>
-
-                <span v-else>
-                    i
-                </span>
-            </div>
-
-            <div class="feedback-content">
-                <strong>
-                    {{ feedback.title }}
-                </strong>
-
-                <p>
-                    {{ feedback.message }}
-                </p>
-            </div>
-
-            <button
-                type="button"
-                class="feedback-close"
-                @click="closeFeedback"
-            >
-                ×
-            </button>
-        </div>
+        <DailyFeedback
+            :feedback="feedback"
+            @close="closeFeedback"
+        />
 
         <DailyForm
             v-if="showForm"
@@ -325,17 +340,11 @@ onMounted(
                 v-if="dailies.length === 0"
                 class="empty"
             >
-                <span>
-                    📅
-                </span>
-
-                <h2>
-                    Nenhuma diária criada
-                </h2>
+                <span>📅</span>
+                <h2>Nenhuma diária criada</h2>
 
                 <p>
-                    Crie uma missão recorrente
-                    para começar sua rotina.
+                    Crie uma missão recorrente para começar sua rotina.
                 </p>
 
                 <button
@@ -347,75 +356,84 @@ onMounted(
             </section>
 
             <template v-else>
-                <section class="daily-section">
-                    <div class="section-title">
-                        <span>
-                            HOJE
-                        </span>
+                <DailyFilters
+                    v-model="filters"
+                    :total="filteredDailies.length"
+                />
 
-                        <strong>
-                            {{ todayDailies.length }}
-                            {{
-                                todayDailies.length === 1
-                                    ? "MISSÃO"
-                                    : "MISSÕES"
-                            }}
-                        </strong>
-                    </div>
-
-                    <div
-                        v-if="todayDailies.length"
-                        class="daily-list"
-                    >
-                        <DailyCard
-                            v-for="daily in todayDailies"
-                            :key="daily.id"
-                            :daily="daily"
-                            @complete="completeDaily"
-                            @fail="failDaily"
-                            @remove="removeDaily"
-                        />
-                    </div>
-
-                    <div
-                        v-else
-                        class="nothing-today"
-                    >
-                        ✓ Nenhuma diária
-                        programada para hoje.
-                    </div>
-                </section>
-
-                <section
-                    v-if="otherDailies.length"
-                    class="daily-section"
+                <div
+                    v-if="filteredDailies.length === 0"
+                    class="filter-empty"
                 >
-                    <div class="section-title">
-                        <span>
-                            OUTRAS DIÁRIAS
-                        </span>
+                    Nenhuma diária encontrada com os filtros selecionados.
+                </div>
 
-                        <strong>
-                            {{ otherDailies.length }}
-                            {{
-                                otherDailies.length === 1
-                                    ? "MISSÃO"
-                                    : "MISSÕES"
-                            }}
-                        </strong>
-                    </div>
+                <template v-else>
+                    <section class="daily-section">
+                        <div class="section-title">
+                            <span>HOJE</span>
 
-                    <div class="daily-list">
-                        <DailyCard
-                            v-for="daily in otherDailies"
-                            :key="daily.id"
-                            :daily="daily"
-                            @complete="completeDaily"
-                            @fail="failDaily"
-                            @remove="removeDaily"
-                        />
-                    </div>
-                </section>
+                            <strong>
+                                {{ todayDailies.length }}
+                                {{
+                                    todayDailies.length === 1
+                                        ? "MISSÃO"
+                                        : "MISSÕES"
+                                }}
+                            </strong>
+                        </div>
+
+                        <div
+                            v-if="todayDailies.length"
+                            class="daily-list"
+                        >
+                            <DailyCard
+                                v-for="daily in todayDailies"
+                                :key="daily.id"
+                                :daily="daily"
+                                @complete="completeDaily"
+                                @fail="failDaily"
+                                @remove="removeDaily"
+                            />
+                        </div>
+
+                        <div
+                            v-else
+                            class="nothing-today"
+                        >
+                            Nenhuma diária deste filtro está programada para hoje.
+                        </div>
+                    </section>
+
+                    <section
+                        v-if="otherDailies.length"
+                        class="daily-section"
+                    >
+                        <div class="section-title">
+                            <span>OUTRAS DIÁRIAS</span>
+
+                            <strong>
+                                {{ otherDailies.length }}
+                                {{
+                                    otherDailies.length === 1
+                                        ? "MISSÃO"
+                                        : "MISSÕES"
+                                }}
+                            </strong>
+                        </div>
+
+                        <div class="daily-list">
+                            <DailyCard
+                                v-for="daily in otherDailies"
+                                :key="daily.id"
+                                :daily="daily"
+                                @complete="completeDaily"
+                                @fail="failDaily"
+                                @remove="removeDaily"
+                            />
+                        </div>
+                    </section>
+                </template>
             </template>
         </template>
     </section>
@@ -459,12 +477,11 @@ onMounted(
 .empty button {
     padding: 12px 18px;
     color: white;
-    background:
-        linear-gradient(
-            90deg,
-            #7227dc,
-            #a928ef
-        );
+    background: linear-gradient(
+        90deg,
+        #7227dc,
+        #a928ef
+    );
     border: 1px solid #b05bf0;
     border-radius: 7px;
     font-family: inherit;
@@ -477,170 +494,15 @@ onMounted(
     filter: brightness(1.08);
 }
 
-/* =========================
-   FEEDBACK
-   ========================= */
-
-.feedback {
-    margin-bottom: 24px;
-    padding: 14px 16px;
-
-    display: grid;
-    grid-template-columns:
-        36px
-        minmax(0, 1fr)
-        auto;
-
-    align-items: center;
-    gap: 12px;
-
-    background: #151f30;
-    border: 1px solid #354158;
+.filter-empty {
+    padding: 30px;
+    color: #77869a;
+    text-align: center;
+    background: #101927;
+    border: 1px dashed #354158;
     border-radius: 10px;
-}
-
-.feedback-icon {
-    width: 34px;
-    height: 34px;
-
-    display: grid;
-    place-items: center;
-
-    border-radius: 8px;
-
-    font-size: 16px;
-    font-weight: 800;
-}
-
-.feedback-content {
-    min-width: 0;
-}
-
-.feedback-content strong {
-    display: block;
-
-    margin-bottom: 3px;
-
-    color: #f2f5fb;
-
     font-size: 11px;
 }
-
-.feedback-content p {
-    margin: 0;
-
-    color: #929fb2;
-
-    font-size: 10px;
-    line-height: 1.5;
-}
-
-.feedback-close {
-    padding: 4px;
-
-    color: #768398;
-    background: transparent;
-
-    border: 0;
-
-    font-size: 18px;
-    cursor: pointer;
-}
-
-.feedback.success {
-    border-color: #347e69;
-}
-
-.feedback.success .feedback-icon {
-    color: #68e2b8;
-    background:
-        rgba(
-            48,
-            163,
-            123,
-            0.14
-        );
-}
-
-.feedback.warning {
-    border-color: #826a34;
-}
-
-.feedback.warning .feedback-icon {
-    color: #f3c55b;
-    background:
-        rgba(
-            206,
-            158,
-            54,
-            0.13
-        );
-}
-
-.feedback.error {
-    border-color: #834456;
-}
-
-.feedback.error .feedback-icon {
-    color: #ff7896;
-    background:
-        rgba(
-            206,
-            67,
-            94,
-            0.13
-        );
-}
-
-.feedback.special {
-    border-color: #75439f;
-
-    background:
-        linear-gradient(
-            90deg,
-            rgba(117, 67, 159, 0.13),
-            #151f30 35%
-        );
-}
-
-.feedback.special .feedback-icon {
-    color: #ca82ff;
-    background:
-        rgba(
-            160,
-            73,
-            222,
-            0.14
-        );
-
-    box-shadow:
-        0 0 14px
-        rgba(
-            165,
-            73,
-            226,
-            0.13
-        );
-}
-
-.feedback.info {
-    border-color: #3f5674;
-}
-
-.feedback.info .feedback-icon {
-    color: #8eb8ee;
-    background:
-        rgba(
-            73,
-            119,
-            178,
-            0.13
-        );
-}
-
-/* =========================
-   LISTA
-   ========================= */
 
 .daily-section {
     margin-bottom: 30px;
@@ -674,25 +536,15 @@ onMounted(
     border-radius: 8px;
 }
 
-/* =========================
-   VAZIO
-   ========================= */
-
 .empty {
     min-height: 380px;
-
     display: flex;
     flex-direction: column;
-
     align-items: center;
     justify-content: center;
-
     gap: 13px;
-
     text-align: center;
-
     background: #121c2d;
-
     border: 1px dashed #3b4960;
     border-radius: 12px;
 }
@@ -718,13 +570,6 @@ onMounted(
 
     .new-button {
         width: 100%;
-    }
-
-    .feedback {
-        grid-template-columns:
-            34px
-            minmax(0, 1fr)
-            auto;
     }
 }
 </style>
