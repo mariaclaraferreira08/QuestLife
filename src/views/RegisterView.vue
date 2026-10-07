@@ -1,13 +1,6 @@
 <script setup>
-import {
-    computed,
-    ref
-} from "vue"
-
-import {
-    RouterLink,
-    useRouter
-} from "vue-router"
+import { computed, ref } from "vue"
+import { RouterLink, useRouter } from "vue-router"
 
 import authService from "../services/authService"
 import playerService from "../services/playerService"
@@ -18,21 +11,17 @@ const name = ref("")
 const email = ref("")
 const password = ref("")
 const confirmPassword = ref("")
-
 const message = ref("")
 const loading = ref(false)
 
 const passwordRules = computed(() => {
-    return authService
-        .validatePassword(
-            password.value
-        )
+    return authService.validatePassword(
+        password.value
+    )
 })
 
 const passwordsMatch = computed(() => {
-    if (
-        !confirmPassword.value
-    ) {
+    if (!confirmPassword.value) {
         return false
     }
 
@@ -45,21 +34,16 @@ const passwordsMatch = computed(() => {
 async function register() {
     message.value = ""
 
-    if (loading.value) {
-        return
-    }
+    if (loading.value) return
 
     loading.value = true
 
     try {
         const result =
             await authService.register({
-                name:
-                    name.value,
-                email:
-                    email.value,
-                password:
-                    password.value,
+                name: name.value,
+                email: email.value,
+                password: password.value,
                 confirmPassword:
                     confirmPassword.value
             })
@@ -72,9 +56,7 @@ async function register() {
             return
         }
 
-        playerService
-            .loadCurrentPlayer()
-
+        playerService.loadCurrentPlayer()
         router.push("/")
     } finally {
         loading.value = false
@@ -96,7 +78,7 @@ async function register() {
                     </h1>
 
                     <span>
-                        CRIE SUA JORNADA
+                        SUA AVENTURA COMEÇA AQUI
                     </span>
                 </div>
             </div>
@@ -322,9 +304,7 @@ async function register() {
     background: #131d2d;
     border: 1px solid #354158;
     border-radius: 18px;
-    box-shadow:
-        0 24px 70px
-        rgba(0, 0, 0, 0.28);
+    box-shadow: 0 24px 70px rgba(0, 0, 0, 0.28);
 }
 
 .brand {
@@ -340,12 +320,7 @@ async function register() {
     display: grid;
     place-items: center;
     color: white;
-    background:
-        linear-gradient(
-            135deg,
-            #7d3fd3,
-            #b25aea
-        );
+    background: linear-gradient(135deg, #7d3fd3, #b25aea);
     border-radius: 12px;
     font-size: 20px;
     font-weight: 900;
@@ -420,16 +395,13 @@ async function register() {
 
 .auth-form input:focus {
     border-color: #8c4bd0;
-    box-shadow:
-        0 0 0 3px
-        rgba(140, 75, 208, 0.1);
+    box-shadow: 0 0 0 3px rgba(140, 75, 208, 0.1);
 }
 
 .password-rules {
     margin-top: -7px;
     display: grid;
-    grid-template-columns:
-        repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 7px 12px;
     color: #69778d;
     font-size: 10px;
@@ -449,8 +421,7 @@ async function register() {
     margin: 0;
     padding: 10px 12px;
     color: #ff91a3;
-    background:
-        rgba(255, 97, 122, 0.07);
+    background: rgba(255, 97, 122, 0.07);
     border: 1px solid #6c3948;
     border-radius: 8px;
     font-size: 11px;
@@ -459,12 +430,7 @@ async function register() {
 .primary-button {
     min-height: 45px;
     color: white;
-    background:
-        linear-gradient(
-            135deg,
-            #7431be,
-            #a34cdd
-        );
+    background: linear-gradient(135deg, #7431be, #a34cdd);
     border: 0;
     border-radius: 9px;
     font-family: inherit;

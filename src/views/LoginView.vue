@@ -1,10 +1,6 @@
 <script setup>
 import { ref } from "vue"
-
-import {
-    RouterLink,
-    useRouter
-} from "vue-router"
+import { RouterLink, useRouter } from "vue-router"
 
 import authService from "../services/authService"
 import playerService from "../services/playerService"
@@ -13,25 +9,21 @@ const router = useRouter()
 
 const email = ref("")
 const password = ref("")
-
 const message = ref("")
 const loading = ref(false)
 
 async function login() {
     message.value = ""
 
-    if (loading.value) {
-        return
-    }
+    if (loading.value) return
 
     loading.value = true
 
     try {
-        const result =
-            await authService.login(
-                email.value,
-                password.value
-            )
+        const result = await authService.login(
+            email.value,
+            password.value
+        )
 
         if (!result.success) {
             message.value =
@@ -41,9 +33,7 @@ async function login() {
             return
         }
 
-        playerService
-            .loadCurrentPlayer()
-
+        playerService.loadCurrentPlayer()
         router.push("/")
     } finally {
         loading.value = false
@@ -65,7 +55,7 @@ async function login() {
                     </h1>
 
                     <span>
-                        SUA JORNADA CONTINUA
+                        CONTINUE DE ONDE PAROU
                     </span>
                 </div>
             </div>
@@ -76,12 +66,12 @@ async function login() {
                 </span>
 
                 <h2>
-                    Bem-vindo de volta
+                    Entre na sua conta
                 </h2>
 
                 <p>
-                    Entre usando o e-mail
-                    cadastrado na sua conta.
+                    Use o e-mail cadastrado para
+                    continuar de onde parou.
                 </p>
             </header>
 
@@ -178,9 +168,7 @@ async function login() {
     background: #131d2d;
     border: 1px solid #354158;
     border-radius: 18px;
-    box-shadow:
-        0 24px 70px
-        rgba(0, 0, 0, 0.28);
+    box-shadow: 0 24px 70px rgba(0, 0, 0, 0.28);
 }
 
 .brand {
@@ -196,12 +184,7 @@ async function login() {
     display: grid;
     place-items: center;
     color: white;
-    background:
-        linear-gradient(
-            135deg,
-            #7d3fd3,
-            #b25aea
-        );
+    background: linear-gradient(135deg, #7d3fd3, #b25aea);
     border-radius: 12px;
     font-size: 20px;
     font-weight: 900;
@@ -276,17 +259,14 @@ async function login() {
 
 .auth-form input:focus {
     border-color: #8c4bd0;
-    box-shadow:
-        0 0 0 3px
-        rgba(140, 75, 208, 0.1);
+    box-shadow: 0 0 0 3px rgba(140, 75, 208, 0.1);
 }
 
 .message {
     margin: 0;
     padding: 10px 12px;
     color: #ff91a3;
-    background:
-        rgba(255, 97, 122, 0.07);
+    background: rgba(255, 97, 122, 0.07);
     border: 1px solid #6c3948;
     border-radius: 8px;
     font-size: 11px;
@@ -295,12 +275,7 @@ async function login() {
 .primary-button {
     min-height: 45px;
     color: white;
-    background:
-        linear-gradient(
-            135deg,
-            #7431be,
-            #a34cdd
-        );
+    background: linear-gradient(135deg, #7431be, #a34cdd);
     border: 0;
     border-radius: 9px;
     font-family: inherit;

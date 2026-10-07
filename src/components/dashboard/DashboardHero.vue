@@ -11,8 +11,8 @@ defineProps({
     <section class="dashboard-hero">
         <div class="hero-content">
             <span class="eyebrow">
-                BEM-VINDO DE VOLTA,
-                {{ player.name || "AVENTUREIRO" }}!
+                QUE BOM TER VOCÊ DE VOLTA,
+                {{ player.name?.toUpperCase() || "AVENTUREIRO" }}!
             </span>
 
             <h1>
@@ -20,22 +20,21 @@ defineProps({
             </h1>
 
             <p>
-                A Guilda tem novas missões à sua espera.
-                Continue avançando, conquiste recompensas
-                e fortaleça seu personagem.
+                Organize o que precisa fazer,
+                complete suas missões e continue evoluindo.
             </p>
         </div>
 
-        <div class="hero-player">
-            <span class="player-name">
+        <div class="player-summary">
+            <strong>
                 {{ player.name || "Aventureiro" }}
-            </span>
+            </strong>
 
-            <span class="player-email">
+            <span class="email">
                 {{ player.email }}
             </span>
 
-            <span class="player-level">
+            <span class="level">
                 Nível {{ player.level || 1 }}
             </span>
         </div>
@@ -44,7 +43,7 @@ defineProps({
 
 <style scoped>
 .dashboard-hero {
-    min-height: 170px;
+    min-height: 168px;
     padding: 28px;
     display: flex;
     align-items: center;
@@ -52,13 +51,13 @@ defineProps({
     gap: 30px;
     background:
         linear-gradient(
-            135deg,
-            rgba(128, 44, 227, 0.14),
-            rgba(21, 31, 48, 0.92) 45%
-        );
-    border:
-        1px solid #2d3a51;
-    border-radius: 14px;
+            120deg,
+            rgba(111, 38, 181, 0.12),
+            transparent 45%
+        ),
+        #151f30;
+    border: 1px solid #354158;
+    border-radius: 15px;
 }
 
 .hero-content {
@@ -66,79 +65,71 @@ defineProps({
 }
 
 .eyebrow {
-    display: block;
-    margin-bottom: 8px;
-    color: #bd7cff;
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 2px;
+    color: #c36fff;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 1.8px;
 }
 
-.dashboard-hero h1 {
-    margin: 0;
-    color: #f2f5fb;
+.hero-content h1 {
+    margin: 10px 0 8px;
+    color: #f5f1fa;
     font-size: 36px;
-    line-height: 1.1;
 }
 
-.dashboard-hero p {
-    max-width: 560px;
-    margin: 12px 0 0;
-    color: #9da9bd;
+.hero-content p {
+    max-width: 650px;
+    margin: 0;
+    color: #9ba8bb;
     font-size: 14px;
     line-height: 1.6;
 }
 
-.hero-player {
+.player-summary {
+    width: 190px;
     flex-shrink: 0;
-    min-width: 190px;
-    max-width: 240px;
-    padding: 16px 20px;
+    padding: 18px;
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 6px;
     background: #101927;
-    border:
-        1px solid #354158;
+    border: 1px solid #354158;
     border-radius: 10px;
 }
 
-.player-name {
-    color: #f2f5fb;
+.player-summary strong {
+    color: #f2f4f8;
     font-size: 14px;
+}
+
+.email {
+    overflow: hidden;
+    color: #77879d;
+    font-size: 9px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.level {
+    margin-top: 3px;
+    color: #c362ff;
+    font-size: 10px;
     font-weight: 700;
 }
 
-.player-email {
-    overflow: hidden;
-    color: #77869b;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    font-size: 9px;
-}
-
-.player-level {
-    margin-top: 4px;
-    color: #bd7cff;
-    font-size: 11px;
-    font-weight: 600;
-}
-
-@media (max-width: 700px) {
+@media (max-width: 750px) {
     .dashboard-hero {
-        padding: 22px;
+        align-items: flex-start;
         flex-direction: column;
-        align-items: stretch;
     }
 
-    .dashboard-hero h1 {
-        font-size: 30px;
-    }
-
-    .hero-player {
+    .player-summary {
         width: 100%;
-        max-width: none;
         box-sizing: border-box;
+    }
+
+    .hero-content h1 {
+        font-size: 30px;
     }
 }
 </style>

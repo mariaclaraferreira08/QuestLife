@@ -35,38 +35,28 @@ let messageTimer = null
 
 const inventoryItems = computed(() => {
     const inventory =
-        props.player?.inventory ||
-        {}
+        props.player?.inventory || {}
 
-    return Object.entries(
-        inventory
-    )
-        .filter(
-            ([, quantity]) =>
-                quantity > 0
-        )
-        .map(
-            ([itemId, quantity]) => {
-                const item =
-                    shopItems[itemId]
+    return Object.entries(inventory)
+        .filter(([, quantity]) => quantity > 0)
+        .map(([itemId, quantity]) => {
+            const item = shopItems[itemId]
 
-                if (!item) {
-                    return null
-                }
-
-                return {
-                    ...item,
-                    quantity
-                }
+            if (!item) {
+                return null
             }
-        )
+
+            return {
+                ...item,
+                quantity
+            }
+        })
         .filter(Boolean)
 })
 
 const activeEffects = computed(() => {
     return (
-        props.player
-            ?.activeEffects ||
+        props.player?.activeEffects ||
         {}
     )
 })
@@ -109,12 +99,6 @@ const targetsByType = computed(() => {
     }
 })
 
-/*
- * =========================
- * FEEDBACK
- * =========================
- */
-
 function showMessage(text) {
     if (messageTimer) {
         clearTimeout(messageTimer)
@@ -122,11 +106,10 @@ function showMessage(text) {
 
     message.value = text
 
-    messageTimer =
-        setTimeout(() => {
-            message.value = ""
-            messageTimer = null
-        }, 2500)
+    messageTimer = setTimeout(() => {
+        message.value = ""
+        messageTimer = null
+    }, 2500)
 }
 
 function clearMessage() {
@@ -138,38 +121,21 @@ function clearMessage() {
     message.value = ""
 }
 
-/*
- * =========================
- * USAR ITEM
- * =========================
- */
-
 function handleUse(item) {
     clearMessage()
 
-    if (
-        item.type ===
-        "consumable"
-    ) {
-        useConsumable(
-            item.id
-        )
-
+    if (item.type === "consumable") {
+        useConsumable(item.id)
         return
     }
 
-    selectedItem.value =
-        item
-
-    showSelector.value =
-        true
+    selectedItem.value = item
+    showSelector.value = true
 }
 
 function useConsumable(itemId) {
     const result =
-        shopService.useItem(
-            itemId
-        )
+        shopService.useItem(itemId)
 
     if (!result.success) {
         if (
@@ -177,11 +143,11 @@ function useConsumable(itemId) {
             "health-already-full"
         ) {
             showMessage(
-                "Sua vida já está cheia."
+                "Seu HP já está cheio."
             )
         } else {
             showMessage(
-                "Não foi possível usar o item."
+                "Não foi possível usar esse item."
             )
         }
 
@@ -192,30 +158,19 @@ function useConsumable(itemId) {
         `${result.item.name} usado! +${result.healed} HP`
     )
 
-    emit(
-        "inventory-updated"
-    )
+    emit("inventory-updated")
 }
 
-/*
- * =========================
- * ITENS ESPECIAIS
- * =========================
- */
-
-function activateSpecialItem(
-    selection
-) {
+function activateSpecialItem(selection) {
     clearMessage()
 
     const result =
-        shopService
-            .activateSpecialItem(
-                selection.itemId,
-                selection.targetType,
-                selection.targetId,
-                selection.targetTitle
-            )
+        shopService.activateSpecialItem(
+            selection.itemId,
+            selection.targetType,
+            selection.targetId,
+            selection.targetTitle
+        )
 
     if (!result.success) {
         if (
@@ -223,11 +178,11 @@ function activateSpecialItem(
             "effect-already-active"
         ) {
             showMessage(
-                "Você já possui uma proteção desse tipo ativa."
+                "Essa proteção já está ativa."
             )
         } else {
             showMessage(
-                "Não foi possível ativar o item."
+                "Não foi possível ativar esse item."
             )
         }
 
@@ -249,25 +204,16 @@ function activateSpecialItem(
 
     closeSelector()
 
-    emit(
-        "inventory-updated"
-    )
+    emit("inventory-updated")
 }
-
-/*
- * =========================
- * CANCELAR EFEITO
- * =========================
- */
 
 function cancelEffect(effectKey) {
     clearMessage()
 
     const result =
-        shopService
-            .cancelSpecialEffect(
-                effectKey
-            )
+        shopService.cancelSpecialEffect(
+            effectKey
+        )
 
     if (!result.success) {
         showMessage(
@@ -281,30 +227,13 @@ function cancelEffect(effectKey) {
         "Proteção cancelada. O item voltou para sua mochila."
     )
 
-    emit(
-        "inventory-updated"
-    )
+    emit("inventory-updated")
 }
-
-/*
- * =========================
- * MODAL
- * =========================
- */
 
 function closeSelector() {
-    showSelector.value =
-        false
-
-    selectedItem.value =
-        null
+    showSelector.value = false
+    selectedItem.value = null
 }
-
-/*
- * =========================
- * LIMPEZA
- * =========================
- */
 
 onBeforeUnmount(() => {
     if (messageTimer) {
@@ -427,20 +356,11 @@ onBeforeUnmount(() => {
     margin-bottom: 14px;
     padding: 9px 11px;
     color: #c9b1df;
-    background:
-        rgba(
-            139,
-            73,
-            209,
-            0.1
-        );
+    background: rgba(139, 73, 209, 0.1);
     border: 1px solid #684090;
     border-radius: 7px;
     font-size: 10px;
-
-    animation:
-        message-enter
-        0.2s ease;
+    animation: message-enter 0.2s ease;
 }
 
 .inventory-list {
@@ -477,14 +397,12 @@ onBeforeUnmount(() => {
 @keyframes message-enter {
     from {
         opacity: 0;
-        transform:
-            translateY(-3px);
+        transform: translateY(-3px);
     }
 
     to {
         opacity: 1;
-        transform:
-            translateY(0);
+        transform: translateY(0);
     }
 }
 </style>

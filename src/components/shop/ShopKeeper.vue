@@ -35,14 +35,13 @@ defineProps({
             </span>
 
             <h2>
-                Boas-vindas, {{ playerName }}.
+                Oi, {{ playerName }}.
             </h2>
 
             <p class="intro">
-                Mippy separou poções,
-                relíquias e artefatos para
-                ajudar você a sobreviver às
-                próximas missões.
+                Mippy separou poções, relíquias e alguns
+                artefatos para quando uma missão resolver
+                dar mais trabalho do que deveria.
             </p>
 
             <div class="dialogue">
@@ -56,28 +55,18 @@ defineProps({
                     </strong>
 
                     <p>
-                        Tenho algumas coisas
-                        que podem ajudar na
-                        sua próxima missão.
-                        Escolha com sabedoria:
-                        certas aventuras cobram
-                        mais do que coragem.
+                        Mippy recomenda dar uma olhada no
+                        estoque antes de sair por aí tomando
+                        dano. Mas Mippy não manda em ninguém.
+                        Ainda.
                     </p>
                 </div>
             </div>
 
             <div class="merchant-info">
-                <span>
-                    ✦ POÇÕES
-                </span>
-
-                <span>
-                    ✦ RELÍQUIAS
-                </span>
-
-                <span>
-                    ✦ ARTEFATOS
-                </span>
+                <span>✦ POÇÕES</span>
+                <span>✦ RELÍQUIAS</span>
+                <span>✦ ARTEFATOS</span>
             </div>
         </div>
     </section>
@@ -87,20 +76,13 @@ defineProps({
 .shopkeeper {
     min-height: 300px;
     display: grid;
-    grid-template-columns:
-        320px
-        minmax(0, 1fr);
+    grid-template-columns: 320px minmax(0, 1fr);
     overflow: hidden;
     position: relative;
     background:
         linear-gradient(
             120deg,
-            rgba(
-                111,
-                38,
-                181,
-                0.15
-            ),
+            rgba(111, 38, 181, 0.15),
             transparent 42%
         ),
         #151f30;
@@ -118,22 +100,11 @@ defineProps({
     background:
         radial-gradient(
             circle,
-            rgba(
-                139,
-                68,
-                212,
-                0.12
-            ),
+            rgba(139, 68, 212, 0.12),
             transparent 70%
         );
     pointer-events: none;
 }
-
-/*
- * =========================
- * ARTE
- * =========================
- */
 
 .shopkeeper-art {
     min-height: 300px;
@@ -145,12 +116,7 @@ defineProps({
     background:
         radial-gradient(
             circle at 50% 65%,
-            rgba(
-                144,
-                82,
-                199,
-                0.21
-            ),
+            rgba(144, 82, 199, 0.21),
             transparent 58%
         ),
         linear-gradient(
@@ -158,8 +124,7 @@ defineProps({
             #121c2b,
             #101927
         );
-    border-right:
-        1px solid #354158;
+    border-right: 1px solid #354158;
 }
 
 .art-glow {
@@ -170,12 +135,7 @@ defineProps({
     background:
         radial-gradient(
             circle,
-            rgba(
-                144,
-                78,
-                218,
-                0.16
-            ),
+            rgba(144, 78, 218, 0.16),
             transparent 65%
         );
     filter: blur(8px);
@@ -188,25 +148,12 @@ defineProps({
     position: relative;
     z-index: 2;
     object-fit: contain;
-    object-position:
-        center bottom;
+    object-position: center bottom;
     filter:
         drop-shadow(
-            0 12px 18px
-            rgba(
-                0,
-                0,
-                0,
-                0.38
-            )
+            0 12px 18px rgba(0, 0, 0, 0.38)
         );
 }
-
-/*
- * =========================
- * PLACA DA MIPPY
- * =========================
- */
 
 .merchant-nameplate {
     position: absolute;
@@ -218,25 +165,10 @@ defineProps({
     display: flex;
     flex-direction: column;
     gap: 2px;
-    background:
-        rgba(
-            9,
-            15,
-            25,
-            0.88
-        );
+    background: rgba(9, 15, 25, 0.88);
     border: 1px solid #65428a;
     border-radius: 8px;
-    box-shadow:
-        0 7px 20px
-        rgba(
-            0,
-            0,
-            0,
-            0.22
-        );
-    backdrop-filter:
-        blur(4px);
+    box-shadow: 0 7px 20px rgba(0, 0, 0, 0.22);
 }
 
 .merchant-nameplate strong {
@@ -251,12 +183,6 @@ defineProps({
     font-weight: 800;
     letter-spacing: 1px;
 }
-
-/*
- * =========================
- * CONTEÚDO
- * =========================
- */
 
 .shopkeeper-content {
     min-width: 0;
@@ -288,37 +214,22 @@ defineProps({
     line-height: 1.7;
 }
 
-/*
- * =========================
- * FALA DA MIPPY
- * =========================
- */
-
 .dialogue {
     max-width: 590px;
     display: flex;
     align-items: flex-start;
     gap: 12px;
     padding: 15px 18px;
-    background:
-        rgba(
-            13,
-            22,
-            36,
-            0.75
-        );
+    background: rgba(13, 22, 36, 0.75);
     border: 1px solid #354158;
-    border-left:
-        3px solid #a44ce7;
+    border-left: 3px solid #a44ce7;
     border-radius: 9px;
 }
 
 .quote {
     flex-shrink: 0;
     color: #c573ff;
-    font-family:
-        Georgia,
-        serif;
+    font-family: Georgia, serif;
     font-size: 28px;
     line-height: 1;
 }
@@ -344,12 +255,6 @@ defineProps({
     line-height: 1.7;
 }
 
-/*
- * =========================
- * CATEGORIAS
- * =========================
- */
-
 .merchant-info {
     margin-top: 19px;
     display: flex;
@@ -364,17 +269,9 @@ defineProps({
     letter-spacing: 1px;
 }
 
-/*
- * =========================
- * RESPONSIVO
- * =========================
- */
-
 @media (max-width: 850px) {
     .shopkeeper {
-        grid-template-columns:
-            250px
-            minmax(0, 1fr);
+        grid-template-columns: 250px minmax(0, 1fr);
     }
 
     .shopkeeper-art {
@@ -392,15 +289,13 @@ defineProps({
 
 @media (max-width: 650px) {
     .shopkeeper {
-        grid-template-columns:
-            1fr;
+        grid-template-columns: 1fr;
     }
 
     .shopkeeper-art {
         min-height: 250px;
         border-right: 0;
-        border-bottom:
-            1px solid #354158;
+        border-bottom: 1px solid #354158;
     }
 
     .shopkeeper-image {
@@ -413,11 +308,6 @@ defineProps({
 
     .shopkeeper-content h2 {
         font-size: 22px;
-    }
-
-    .merchant-nameplate {
-        left: 14px;
-        bottom: 14px;
     }
 }
 </style>
