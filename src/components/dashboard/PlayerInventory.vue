@@ -1,7 +1,8 @@
 <script setup>
 import {
     computed,
-    ref
+    ref,
+    onBeforeUnmount
 } from "vue"
 
 import InventoryItem from "./inventory/InventoryItem.vue"
@@ -30,86 +31,122 @@ const message = ref("")
 const showSelector = ref(false)
 const selectedItem = ref(null)
 
-const inventoryItems =
-    computed(() => {
-        const inventory =
-            props.player?.inventory ||
-            {}
+let messageTimer = null
 
-        return Object.entries(
-            inventory
+const inventoryItems = computed(() => {
+    const inventory =
+        props.player?.inventory ||
+        {}
+
+    return Object.entries(
+        inventory
+    )
+        .filter(
+            ([, quantity]) =>
+                quantity > 0
         )
-            .filter(
-                ([, quantity]) =>
-                    quantity > 0
-            )
-            .map(
-                ([itemId, quantity]) => {
-                    const item =
-                        shopItems[itemId]
+        .map(
+            ([itemId, quantity]) => {
+                const item =
+                    shopItems[itemId]
 
-                    if (!item) {
-                        return null
-                    }
-
-                    return {
-                        ...item,
-                        quantity
-                    }
+                if (!item) {
+                    return null
                 }
-            )
-            .filter(Boolean)
-    })
 
-const activeEffects =
-    computed(() => {
-        return (
-            props.player
-                ?.activeEffects ||
-            {}
+                return {
+                    ...item,
+                    quantity
+                }
+            }
         )
-    })
+        .filter(Boolean)
+})
 
-const targetsByType =
-    computed(() => {
-        return {
-            task:
-                taskService
-                    .getTasks()
-                    .filter(
-                        task =>
-                            !task.completed &&
-                            !task.failed
-                    )
-                    .map(task => ({
-                        id: task.id,
-                        title: task.title
-                    })),
+const activeEffects = computed(() => {
+    return (
+        props.player
+            ?.activeEffects ||
+        {}
+    )
+})
 
-            habit:
-                habitService
-                    .getHabits()
-                    .map(habit => ({
-                        id: habit.id,
-                        title:
-                            habit.title ||
-                            habit.name ||
-                            "Hábito"
-                    })),
+const targetsByType = computed(() => {
+    return {
+        task:
+            taskService
+                .getTasks()
+                .filter(
+                    task =>
+                        !task.completed &&
+                        !task.failed
+                )
+                .map(task => ({
+                    id: task.id,
+                    title: task.title
+                })),
 
-            daily:
-                dailyService
-                    .getDailies()
-                    .map(daily => ({
-                        id: daily.id,
-                        title:
-                            daily.title ||
-                            "Diária"
-                    }))
-        }
-    })
+        habit:
+            habitService
+                .getHabits()
+                .map(habit => ({
+                    id: habit.id,
+                    title:
+                        habit.title ||
+                        habit.name ||
+                        "Hábito"
+                })),
+
+        daily:
+            dailyService
+                .getDailies()
+                .map(daily => ({
+                    id: daily.id,
+                    title:
+                        daily.title ||
+                        "Diária"
+                }))
+    }
+})
+
+/*
+ * =========================
+ * FEEDBACK
+ * =========================
+ */
+
+function showMessage(text) {
+    if (messageTimer) {
+        clearTimeout(messageTimer)
+    }
+
+    message.value = text
+
+    messageTimer =
+        setTimeout(() => {
+            message.value = ""
+            messageTimer = null
+        }, 2500)
+}
+
+function clearMessage() {
+    if (messageTimer) {
+        clearTimeout(messageTimer)
+        messageTimer = null
+    }
+
+    message.value = ""
+}
+
+/*
+ * =========================
+ * USAR ITEM
+ * =========================
+ */
 
 function handleUse(item) {
+    clearMessage()
+
     if (
         item.type ===
         "consumable"
@@ -139,27 +176,38 @@ function useConsumable(itemId) {
             result.reason ===
             "health-already-full"
         ) {
-            message.value =
+            showMessage(
                 "Sua vida já está cheia."
+            )
         } else {
-            message.value =
+            showMessage(
                 "Não foi possível usar o item."
+            )
         }
 
         return
     }
 
-    message.value =
+    showMessage(
         `${result.item.name} usado! +${result.healed} HP`
+    )
 
     emit(
         "inventory-updated"
     )
 }
 
+/*
+ * =========================
+ * ITENS ESPECIAIS
+ * =========================
+ */
+
 function activateSpecialItem(
     selection
 ) {
+    clearMessage()
+
     const result =
         shopService
             .activateSpecialItem(
@@ -174,11 +222,13 @@ function activateSpecialItem(
             result.reason ===
             "effect-already-active"
         ) {
-            message.value =
+            showMessage(
                 "Você já possui uma proteção desse tipo ativa."
+            )
         } else {
-            message.value =
+            showMessage(
                 "Não foi possível ativar o item."
+            )
         }
 
         return
@@ -188,11 +238,13 @@ function activateSpecialItem(
         selection.itemId ===
         "protectionAmulet"
     ) {
-        message.value =
+        showMessage(
             `Amuleto protegendo: ${selection.targetTitle}.`
+        )
     } else {
-        message.value =
+        showMessage(
             `Sequência protegida: ${selection.targetTitle}.`
+        )
     }
 
     closeSelector()
@@ -202,9 +254,15 @@ function activateSpecialItem(
     )
 }
 
-function cancelEffect(
-    effectKey
-) {
+/*
+ * =========================
+ * CANCELAR EFEITO
+ * =========================
+ */
+
+function cancelEffect(effectKey) {
+    clearMessage()
+
     const result =
         shopService
             .cancelSpecialEffect(
@@ -212,16 +270,27 @@ function cancelEffect(
             )
 
     if (!result.success) {
+        showMessage(
+            "Não foi possível cancelar a proteção."
+        )
+
         return
     }
 
-    message.value =
+    showMessage(
         "Proteção cancelada. O item voltou para sua mochila."
+    )
 
     emit(
         "inventory-updated"
     )
 }
+
+/*
+ * =========================
+ * MODAL
+ * =========================
+ */
 
 function closeSelector() {
     showSelector.value =
@@ -230,6 +299,18 @@ function closeSelector() {
     selectedItem.value =
         null
 }
+
+/*
+ * =========================
+ * LIMPEZA
+ * =========================
+ */
+
+onBeforeUnmount(() => {
+    if (messageTimer) {
+        clearTimeout(messageTimer)
+    }
+})
 </script>
 
 <template>
@@ -356,6 +437,10 @@ function closeSelector() {
     border: 1px solid #684090;
     border-radius: 7px;
     font-size: 10px;
+
+    animation:
+        message-enter
+        0.2s ease;
 }
 
 .inventory-list {
@@ -387,5 +472,19 @@ function closeSelector() {
 
 .empty-inventory small {
     font-size: 9px;
+}
+
+@keyframes message-enter {
+    from {
+        opacity: 0;
+        transform:
+            translateY(-3px);
+    }
+
+    to {
+        opacity: 1;
+        transform:
+            translateY(0);
+    }
 }
 </style>

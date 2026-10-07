@@ -20,10 +20,6 @@ function percentage(value, max) {
     <section class="character-card">
         <header class="character-header">
             <span>PERSONAGEM</span>
-
-            <button type="button">
-                CUSTOMIZAR
-            </button>
         </header>
 
         <div class="avatar">
@@ -109,10 +105,6 @@ function percentage(value, max) {
 }
 
 .character-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
     margin-bottom: 22px;
 }
 
@@ -121,23 +113,6 @@ function percentage(value, max) {
     font-size: 11px;
     font-weight: 700;
     letter-spacing: 2px;
-}
-
-.character-header button {
-    padding: 7px 10px;
-    color: #d6dde8;
-    background: #101927;
-    border: 1px solid #3a475c;
-    border-radius: 7px;
-    font-family: inherit;
-    font-size: 9px;
-    font-weight: 700;
-    cursor: pointer;
-}
-
-.character-header button:hover {
-    border-color: #8652b3;
-    color: white;
 }
 
 .avatar {
@@ -149,7 +124,6 @@ function percentage(value, max) {
     justify-content: center;
     overflow: hidden;
     position: relative;
-
     background:
         radial-gradient(
             circle at center,
@@ -157,7 +131,6 @@ function percentage(value, max) {
             transparent 65%
         ),
         #101927;
-
     border: 1px solid #4b3c60;
     border-radius: 18px;
 }
