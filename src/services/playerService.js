@@ -1,76 +1,157 @@
 import { ref } from "vue"
-
 import storageService from "./storageService"
+import authService from "./authService"
 import { defaultPlayer } from "../data/player"
-
-const PLAYER_KEY = "player"
 
 const emptyEffects = {
     protection: null,
     streakProtection: null
 }
 
-const storedPlayer =
-    storageService.get(PLAYER_KEY)
+function getPlayerKey() {
+    return authService.getUserStorageKey("player")
+}
 
-const initialPlayer =
-    storedPlayer
-        ? {
+function normalizePlayer(
+    storedPlayer = {},
+    account = null
+) {
+    return {
+        ...defaultPlayer,
+        ...storedPlayer,
+        name:
+            account?.name ||
+            storedPlayer.name ||
+            "",
+        email:
+            account?.email ||
+            storedPlayer.email ||
+            "",
+        health:
+            typeof storedPlayer.health === "number"
+                ? storedPlayer.health
+                : 100,
+        maxHealth:
+            typeof storedPlayer.maxHealth === "number"
+                ? storedPlayer.maxHealth
+                : 100,
+        inventory:
+            storedPlayer.inventory &&
+            typeof storedPlayer.inventory === "object" &&
+            !Array.isArray(storedPlayer.inventory)
+                ? storedPlayer.inventory
+                : {},
+        activeEffects:
+            storedPlayer.activeEffects &&
+            typeof storedPlayer.activeEffects === "object"
+                ? {
+                    ...emptyEffects,
+                    ...storedPlayer.activeEffects
+                }
+                : {
+                    ...emptyEffects
+                },
+        welcomeGiftClaimed:
+            storedPlayer.welcomeGiftClaimed === true
+    }
+}
+
+function createNewPlayer(account) {
+    return normalizePlayer(
+        {
             ...defaultPlayer,
-            ...storedPlayer,
+            name: account?.name || "",
+            email: account?.email || ""
+        },
+        account
+    )
+}
 
-            health:
-                typeof storedPlayer.health === "number"
-                    ? storedPlayer.health
-                    : 100,
+function createInitialPlayer() {
+    const account =
+        authService.getCurrentUser()
 
-            maxHealth:
-                typeof storedPlayer.maxHealth === "number"
-                    ? storedPlayer.maxHealth
-                    : 100,
+    if (!account) {
+        return normalizePlayer(
+            defaultPlayer
+        )
+    }
 
-            inventory:
-                storedPlayer.inventory &&
-                typeof storedPlayer.inventory === "object" &&
-                !Array.isArray(storedPlayer.inventory)
-                    ? storedPlayer.inventory
-                    : {},
+    const playerKey =
+        getPlayerKey()
 
-            activeEffects:
-                storedPlayer.activeEffects &&
-                typeof storedPlayer.activeEffects === "object"
-                    ? {
-                        ...emptyEffects,
-                        ...storedPlayer.activeEffects
-                    }
-                    : {
-                        ...emptyEffects
-                    }
-        }
-        : {
-            ...defaultPlayer,
-            health: 100,
-            maxHealth: 100,
-            inventory: {},
-            activeEffects: {
-                ...emptyEffects
-            }
-        }
+    const storedPlayer =
+        storageService.get(
+            playerKey
+        )
 
-storageService.save(
-    PLAYER_KEY,
-    initialPlayer
-)
+    if (storedPlayer) {
+        return normalizePlayer(
+            storedPlayer,
+            account
+        )
+    }
 
-const player = ref(
-    initialPlayer
-)
+    const newPlayer =
+        createNewPlayer(
+            account
+        )
+
+    storageService.save(
+        playerKey,
+        newPlayer
+    )
+
+    return newPlayer
+}
+
+const player =
+    ref(
+        createInitialPlayer()
+    )
+
+function savePlayer(playerData) {
+    if (
+        !authService.isAuthenticated()
+    ) {
+        return
+    }
+
+    storageService.save(
+        getPlayerKey(),
+        playerData
+    )
+}
 
 const playerService = {
     player,
 
+    /*
+     * =========================
+     * PLAYER
+     * =========================
+     */
+
     getPlayer() {
         return player.value
+    },
+
+    loadCurrentPlayer() {
+        player.value =
+            createInitialPlayer()
+
+        savePlayer(
+            player.value
+        )
+
+        return player.value
+    },
+
+    clearCurrentPlayer() {
+        player.value =
+            normalizePlayer(
+                defaultPlayer
+            )
     },
 
     updatePlayer(updatedData) {
@@ -82,8 +163,7 @@ const playerService = {
         player.value =
             updatedPlayer
 
-        storageService.save(
-            PLAYER_KEY,
+        savePlayer(
             updatedPlayer
         )
 
@@ -92,11 +172,49 @@ const playerService = {
 
     resetHealth() {
         const maxHealth =
-            player.value.maxHealth || 100
+            player.value.maxHealth ||
+            100
 
         return this.updatePlayer({
             health: maxHealth
         })
+    },
+
+    /*
+     * =========================
+     * PRESENTE
+     * =========================
+     */
+
+    claimWelcomeGift() {
+        if (
+            player.value
+                .welcomeGiftClaimed
+        ) {
+            return {
+                success: false,
+                reason:
+                    "already-claimed"
+            }
+        }
+
+        const reward = 50
+
+        this.updatePlayer({
+            coins:
+                (
+                    player.value.coins ||
+                    0
+                ) +
+                reward,
+            welcomeGiftClaimed:
+                true
+        })
+
+        return {
+            success: true,
+            reward
+        }
     },
 
     /*
@@ -138,10 +256,12 @@ const playerService = {
         }
 
         const currentQuantity =
-            inventory[itemId] || 0
+            inventory[itemId] ||
+            0
 
         inventory[itemId] =
-            currentQuantity + quantity
+            currentQuantity +
+            quantity
 
         return this.updatePlayer({
             inventory
@@ -164,18 +284,23 @@ const playerService = {
         }
 
         const currentQuantity =
-            inventory[itemId] || 0
+            inventory[itemId] ||
+            0
 
         if (
-            currentQuantity < quantity
+            currentQuantity <
+            quantity
         ) {
             return false
         }
 
         const newQuantity =
-            currentQuantity - quantity
+            currentQuantity -
+            quantity
 
-        if (newQuantity === 0) {
+        if (
+            newQuantity === 0
+        ) {
             delete inventory[itemId]
         } else {
             inventory[itemId] =
@@ -197,7 +322,8 @@ const playerService = {
 
     getActiveEffects() {
         return (
-            player.value.activeEffects ||
+            player.value
+                .activeEffects ||
             {
                 ...emptyEffects
             }
@@ -238,7 +364,9 @@ const playerService = {
     }
 }
 
-if (typeof window !== "undefined") {
+if (
+    typeof window !== "undefined"
+) {
     window.playerService =
         playerService
 }

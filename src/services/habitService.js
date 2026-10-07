@@ -1,121 +1,245 @@
 import storageService from "./storageService"
+import authService from "./authService"
 
-const HABITS_KEY = "habits"
+const LEGACY_KEY = "habits"
+const MIGRATION_KEY = "questlife_legacy_migrations"
+
+function getHabitsKey() {
+    return authService.getUserStorageKey("habits")
+}
+
+function getMigrationData() {
+    const migrations =
+        storageService.get(MIGRATION_KEY)
+
+    return migrations &&
+        typeof migrations === "object" &&
+        !Array.isArray(migrations)
+        ? migrations
+        : {}
+}
+
+function migrateLegacyHabits() {
+    const email =
+        authService.getCurrentEmail()
+
+    if (!email) {
+        return []
+    }
+
+    const migrations =
+        getMigrationData()
+
+    if (
+        migrations.habits
+    ) {
+        return []
+    }
+
+    const legacyHabits =
+        storageService.get(
+            LEGACY_KEY
+        )
+
+    migrations.habits =
+        email
+
+    storageService.save(
+        MIGRATION_KEY,
+        migrations
+    )
+
+    if (
+        !Array.isArray(
+            legacyHabits
+        ) ||
+        legacyHabits.length ===
+            0
+    ) {
+        storageService.save(
+            getHabitsKey(),
+            []
+        )
+
+        return []
+    }
+
+    storageService.save(
+        getHabitsKey(),
+        legacyHabits
+    )
+
+    return legacyHabits
+}
 
 const habitService = {
-    // ==========================================
-    // CRUD
-    // ==========================================
+    /*
+     * =========================
+     * CRUD
+     * =========================
+     */
 
     getHabits() {
-        return storageService.get(HABITS_KEY) || []
+        if (
+            !authService.isAuthenticated()
+        ) {
+            return []
+        }
+
+        const key =
+            getHabitsKey()
+
+        const storedHabits =
+            storageService.get(key)
+
+        if (
+            Array.isArray(
+                storedHabits
+            )
+        ) {
+            return storedHabits
+        }
+
+        return migrateLegacyHabits()
     },
 
     getHabitById(habitId) {
-        return this.getHabits().find(
-            habit => habit.id === habitId
-        )
+        return this
+            .getHabits()
+            .find(
+                habit =>
+                    habit.id ===
+                    habitId
+            )
     },
 
     addHabit(habit) {
-        const habits = this.getHabits()
+        const habits =
+            this.getHabits()
 
         const newHabit = {
             ...habit,
-
-            id: crypto.randomUUID(),
-
+            id:
+                habit.id ||
+                crypto.randomUUID(),
             frequency:
-                habit.frequency || "daily",
-
+                habit.frequency ||
+                "daily",
             daysOfWeek:
-                habit.daysOfWeek || [],
-
+                habit.daysOfWeek ||
+                [],
             weeklyGoal:
-                habit.weeklyGoal || null,
-
+                habit.weeklyGoal ||
+                null,
             monthlyGoal:
-                habit.monthlyGoal || null,
-
-            /*
-             * Guarda o histórico das conclusões.
-             *
-             * Cada item é uma data ISO.
-             */
-            completions: [],
-
-            streak: 0,
-            bestStreak: 0,
-            previousStreak: 0,
-
-            lastCompletedAt: null,
-
-            failed: false
+                habit.monthlyGoal ||
+                null,
+            completions:
+                habit.completions ||
+                [],
+            streak:
+                habit.streak || 0,
+            bestStreak:
+                habit.bestStreak ||
+                0,
+            previousStreak:
+                habit.previousStreak ||
+                0,
+            lastCompletedAt:
+                habit.lastCompletedAt ||
+                null,
+            failed:
+                habit.failed ||
+                false,
+            failedAt:
+                habit.failedAt ||
+                null,
+            createdAt:
+                habit.createdAt ||
+                new Date()
+                    .toISOString()
         }
 
         habits.push(newHabit)
 
         storageService.save(
-            HABITS_KEY,
+            getHabitsKey(),
             habits
         )
 
         return newHabit
     },
 
-    updateHabit(habitId, updatedData) {
-        const habits = this.getHabits()
+    updateHabit(
+        habitId,
+        updatedData
+    ) {
+        const habits =
+            this.getHabits()
 
-        const updatedHabits = habits.map(
-            habit => {
-                if (habit.id === habitId) {
-                    return {
-                        ...habit,
-                        ...updatedData
+        const updatedHabits =
+            habits.map(
+                habit => {
+                    if (
+                        habit.id ===
+                        habitId
+                    ) {
+                        return {
+                            ...habit,
+                            ...updatedData
+                        }
                     }
-                }
 
-                return habit
-            }
-        )
+                    return habit
+                }
+            )
 
         storageService.save(
-            HABITS_KEY,
+            getHabitsKey(),
             updatedHabits
         )
 
-        return this.getHabitById(habitId)
+        return updatedHabits.find(
+            habit =>
+                habit.id ===
+                habitId
+        )
     },
 
     removeHabit(habitId) {
-        const habits = this.getHabits()
+        const habits =
+            this.getHabits()
 
         const updatedHabits =
             habits.filter(
                 habit =>
-                    habit.id !== habitId
+                    habit.id !==
+                    habitId
             )
 
         storageService.save(
-            HABITS_KEY,
+            getHabitsKey(),
             updatedHabits
         )
 
         return updatedHabits
     },
 
-    // ==========================================
-    // DATAS
-    // ==========================================
+    /*
+     * =========================
+     * DATAS
+     * =========================
+     */
 
-    isSameDay(dateA, dateB) {
+    isSameDay(
+        dateA,
+        dateB
+    ) {
         return (
             dateA.getFullYear() ===
                 dateB.getFullYear() &&
-
             dateA.getMonth() ===
                 dateB.getMonth() &&
-
             dateA.getDate() ===
                 dateB.getDate()
         )
@@ -137,54 +261,94 @@ const habitService = {
         ]
     },
 
-    /*
-     * Descobre se o hábito pode ser
-     * realizado no dia atual.
-     *
-     * DIÁRIO
-     * - sem dias escolhidos:
-     *   todos os dias.
-     *
-     * - com dias escolhidos:
-     *   apenas nesses dias.
-     *
-     * SEMANAL
-     * - respeita os dias escolhidos.
-     *
-     * MENSAL
-     * - pode ser realizado em qualquer
-     *   dia até atingir a meta do mês.
-     */
+    isCompletedToday(habit) {
+        if (!habit) {
+            return false
+        }
+
+        const today =
+            new Date()
+
+        const completions =
+            habit.completions ||
+            []
+
+        const completed =
+            completions.some(
+                completion =>
+                    this.isSameDay(
+                        new Date(
+                            completion
+                        ),
+                        today
+                    )
+            )
+
+        if (completed) {
+            return true
+        }
+
+        if (
+            habit.lastCompletedAt
+        ) {
+            return this.isSameDay(
+                new Date(
+                    habit.lastCompletedAt
+                ),
+                today
+            )
+        }
+
+        return false
+    },
+
+    isFailedToday(habit) {
+        if (
+            !habit ||
+            !habit.failed
+        ) {
+            return false
+        }
+
+        if (
+            !habit.failedAt
+        ) {
+            return false
+        }
+
+        return this.isSameDay(
+            new Date(
+                habit.failedAt
+            ),
+            new Date()
+        )
+    },
+
     isScheduledForToday(habitId) {
         const habit =
-            this.getHabitById(habitId)
+            this.getHabitById(
+                habitId
+            )
 
         if (!habit) {
             return false
         }
 
         const frequency =
-            habit.frequency || "daily"
+            habit.frequency ||
+            "daily"
 
-        /*
-         * Mensal não depende de
-         * dias específicos.
-         */
-        if (frequency === "monthly") {
+        if (
+            frequency ===
+            "monthly"
+        ) {
             return true
         }
 
-        /*
-         * Diário ou semanal sem
-         * dias selecionados.
-         *
-         * Mantemos como disponível
-         * para compatibilidade com
-         * hábitos antigos.
-         */
         if (
             !habit.daysOfWeek ||
-            habit.daysOfWeek.length === 0
+            habit.daysOfWeek.length ===
+                0
         ) {
             return true
         }
@@ -192,20 +356,19 @@ const habitService = {
         const today =
             this.getTodayName()
 
-        return habit.daysOfWeek.includes(
-            today
-        )
+        return habit.daysOfWeek
+            .includes(today)
     },
 
-    // ==========================================
-    // SEMANA
-    // ==========================================
-
     /*
-     * Segunda-feira é considerada
-     * o início da semana.
+     * =========================
+     * SEMANA
+     * =========================
      */
-    getWeekStart(date = new Date()) {
+
+    getWeekStart(
+        date = new Date()
+    ) {
         const result =
             new Date(date)
 
@@ -232,51 +395,74 @@ const habitService = {
         return result
     },
 
-    getWeekCompletions(habit) {
+    getWeekCompletions(
+        habit
+    ) {
         const start =
             this.getWeekStart()
 
         return (
-            habit.completions || []
-        ).filter(completion => {
-            const date =
-                new Date(completion)
+            habit.completions ||
+            []
+        ).filter(
+            completion => {
+                const date =
+                    new Date(
+                        completion
+                    )
 
-            return date >= start
-        }).length
+                return (
+                    date >= start
+                )
+            }
+        ).length
     },
 
-    // ==========================================
-    // MÊS
-    // ==========================================
+    /*
+     * =========================
+     * MÊS
+     * =========================
+     */
 
-    getMonthCompletions(habit) {
+    getMonthCompletions(
+        habit
+    ) {
         const today =
             new Date()
 
         return (
-            habit.completions || []
-        ).filter(completion => {
-            const date =
-                new Date(completion)
+            habit.completions ||
+            []
+        ).filter(
+            completion => {
+                const date =
+                    new Date(
+                        completion
+                    )
 
-            return (
-                date.getFullYear() ===
-                    today.getFullYear() &&
-
-                date.getMonth() ===
-                    today.getMonth()
-            )
-        }).length
+                return (
+                    date.getFullYear() ===
+                        today.getFullYear() &&
+                    date.getMonth() ===
+                        today.getMonth()
+                )
+            }
+        ).length
     },
 
-    // ==========================================
-    // PROGRESSO
-    // ==========================================
+    /*
+     * =========================
+     * PROGRESSO
+     * =========================
+     */
 
-    getCurrentProgress(habitId) {
+    getCurrentProgress(
+        habitId
+    ) {
         const habit =
-            this.getHabitById(habitId)
+            this.getHabitById(
+                habitId
+            )
 
         if (!habit) {
             return {
@@ -286,46 +472,59 @@ const habitService = {
         }
 
         if (
-            habit.frequency === "weekly"
+            habit.frequency ===
+            "weekly"
         ) {
             return {
                 current:
                     this.getWeekCompletions(
                         habit
                     ),
-
                 goal:
-                    habit.weeklyGoal || 1
+                    habit.weeklyGoal ||
+                    1
             }
         }
 
         if (
-            habit.frequency === "monthly"
+            habit.frequency ===
+            "monthly"
         ) {
             return {
                 current:
                     this.getMonthCompletions(
                         habit
                     ),
-
                 goal:
-                    habit.monthlyGoal || 1
+                    habit.monthlyGoal ||
+                    1
             }
         }
 
         return {
-            current: 0,
+            current:
+                this.isCompletedToday(
+                    habit
+                )
+                    ? 1
+                    : 0,
             goal: 1
         }
     },
 
-    // ==========================================
-    // PERMISSÃO PARA CONCLUIR
-    // ==========================================
+    /*
+     * =========================
+     * VALIDAÇÃO
+     * =========================
+     */
 
-    canCompleteToday(habitId) {
+    canCompleteToday(
+        habitId
+    ) {
         const habit =
-            this.getHabitById(habitId)
+            this.getHabitById(
+                habitId
+            )
 
         if (!habit) {
             return {
@@ -334,10 +533,6 @@ const habitService = {
             }
         }
 
-        /*
-         * Primeiro verificamos se
-         * hoje é um dia permitido.
-         */
         if (
             !this.isScheduledForToday(
                 habitId
@@ -350,49 +545,10 @@ const habitService = {
             }
         }
 
-        /*
-         * Máximo de uma conclusão
-         * por dia.
-         */
-        const today =
-            new Date()
-
-        const completedToday =
-            (
-                habit.completions || []
-            ).some(completion => {
-                return this.isSameDay(
-                    new Date(completion),
-                    today
-                )
-            })
-
-        /*
-         * Compatibilidade com hábitos
-         * antigos que ainda não tinham
-         * completions[].
-         */
-        let legacyCompletedToday = false
-
         if (
-            habit.lastCompletedAt &&
-            (
-                !habit.completions ||
-                habit.completions.length === 0
+            this.isCompletedToday(
+                habit
             )
-        ) {
-            legacyCompletedToday =
-                this.isSameDay(
-                    new Date(
-                        habit.lastCompletedAt
-                    ),
-                    today
-                )
-        }
-
-        if (
-            completedToday ||
-            legacyCompletedToday
         ) {
             return {
                 allowed: false,
@@ -401,37 +557,23 @@ const habitService = {
             }
         }
 
-        /*
-         * Se a meta semanal já foi
-         * concluída, não permite novas
-         * conclusões nesta semana.
-         */
         if (
-            habit.frequency === "weekly"
+            this.isFailedToday(
+                habit
+            )
         ) {
-            const progress =
-                this.getCurrentProgress(
-                    habitId
-                )
-
-            if (
-                progress.current >=
-                progress.goal
-            ) {
-                return {
-                    allowed: false,
-                    reason:
-                        "goal-completed"
-                }
+            return {
+                allowed: false,
+                reason:
+                    "already-failed-today"
             }
         }
 
-        /*
-         * O mesmo vale para a meta
-         * mensal.
-         */
         if (
-            habit.frequency === "monthly"
+            habit.frequency ===
+                "weekly" ||
+            habit.frequency ===
+                "monthly"
         ) {
             const progress =
                 this.getCurrentProgress(
@@ -455,13 +597,17 @@ const habitService = {
         }
     },
 
-    // ==========================================
-    // CONCLUIR HÁBITO
-    // ==========================================
+    /*
+     * =========================
+     * CONCLUIR
+     * =========================
+     */
 
     completeHabit(habitId) {
         const habit =
-            this.getHabitById(habitId)
+            this.getHabitById(
+                habitId
+            )
 
         if (!habit) {
             return {
@@ -475,7 +621,9 @@ const habitService = {
                 habitId
             )
 
-        if (!permission.allowed) {
+        if (
+            !permission.allowed
+        ) {
             return {
                 success: false,
                 reason:
@@ -484,7 +632,8 @@ const habitService = {
         }
 
         const now =
-            new Date().toISOString()
+            new Date()
+                .toISOString()
 
         const completions = [
             ...(habit.completions || []),
@@ -495,73 +644,56 @@ const habitService = {
             habit.streak || 0
 
         const frequency =
-            habit.frequency || "daily"
+            habit.frequency ||
+            "daily"
 
-        // ======================================
-        // DIÁRIO
-        // ======================================
-
-        /*
-         * Uma conclusão válida
-         * representa um dia concluído.
-         */
-        if (frequency === "daily") {
+        if (
+            frequency === "daily"
+        ) {
             newStreak++
         }
 
-        // ======================================
-        // SEMANAL
-        // ======================================
-
-        /*
-         * A streak semanal aumenta
-         * SOMENTE quando a meta daquela
-         * semana é alcançada.
-         */
-        if (frequency === "weekly") {
+        if (
+            frequency ===
+            "weekly"
+        ) {
             const currentBefore =
                 this.getWeekCompletions(
                     habit
                 )
 
             const goal =
-                habit.weeklyGoal || 1
-
-            const currentAfter =
-                currentBefore + 1
+                habit.weeklyGoal ||
+                1
 
             if (
-                currentBefore < goal &&
-                currentAfter >= goal
+                currentBefore <
+                    goal &&
+                currentBefore + 1 >=
+                    goal
             ) {
                 newStreak++
             }
         }
 
-        // ======================================
-        // MENSAL
-        // ======================================
-
-        /*
-         * A streak mensal aumenta
-         * SOMENTE quando a meta daquele
-         * mês é alcançada.
-         */
-        if (frequency === "monthly") {
+        if (
+            frequency ===
+            "monthly"
+        ) {
             const currentBefore =
                 this.getMonthCompletions(
                     habit
                 )
 
             const goal =
-                habit.monthlyGoal || 1
-
-            const currentAfter =
-                currentBefore + 1
+                habit.monthlyGoal ||
+                1
 
             if (
-                currentBefore < goal &&
-                currentAfter >= goal
+                currentBefore <
+                    goal &&
+                currentBefore + 1 >=
+                    goal
             ) {
                 newStreak++
             }
@@ -569,7 +701,8 @@ const habitService = {
 
         const newBestStreak =
             Math.max(
-                habit.bestStreak || 0,
+                habit.bestStreak ||
+                    0,
                 newStreak
             )
 
@@ -578,33 +711,35 @@ const habitService = {
                 habitId,
                 {
                     completions,
-
                     streak:
                         newStreak,
-
                     bestStreak:
                         newBestStreak,
-
                     lastCompletedAt:
                         now,
-
-                    failed: false
+                    failed: false,
+                    failedAt: null
                 }
             )
 
         return {
             success: true,
-            habit: updatedHabit
+            habit:
+                updatedHabit
         }
     },
 
-    // ==========================================
-    // FALHAR HÁBITO
-    // ==========================================
+    /*
+     * =========================
+     * FALHAR
+     * =========================
+     */
 
     failHabit(habitId) {
         const habit =
-            this.getHabitById(habitId)
+            this.getHabitById(
+                habitId
+            )
 
         if (!habit) {
             return {
@@ -613,22 +748,61 @@ const habitService = {
             }
         }
 
+        if (
+            !this.isScheduledForToday(
+                habitId
+            )
+        ) {
+            return {
+                success: false,
+                reason:
+                    "not-scheduled-today"
+            }
+        }
+
+        if (
+            this.isCompletedToday(
+                habit
+            )
+        ) {
+            return {
+                success: false,
+                reason:
+                    "already-completed-today"
+            }
+        }
+
+        if (
+            this.isFailedToday(
+                habit
+            )
+        ) {
+            return {
+                success: false,
+                reason:
+                    "habit-already-failed"
+            }
+        }
+
         const updatedHabit =
             this.updateHabit(
                 habitId,
                 {
                     previousStreak:
-                        habit.streak || 0,
-
+                        habit.streak ||
+                        0,
                     streak: 0,
-
-                    failed: true
+                    failed: true,
+                    failedAt:
+                        new Date()
+                            .toISOString()
                 }
             )
 
         return {
             success: true,
-            habit: updatedHabit
+            habit:
+                updatedHabit
         }
     }
 }
